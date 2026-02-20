@@ -8,7 +8,7 @@ RUN npm install --production
 COPY server.js .
 COPY public/ ./public/
 
-RUN mkdir -p /data/roms /data/saves /data/covers
+RUN mkdir -p /data/roms /data/saves /data/covers && echo '[]' > /data/users.json
 
 EXPOSE 3000
 

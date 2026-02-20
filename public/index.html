@@ -421,6 +421,7 @@
   </div>
   <button class="nav-upload-btn" id="navStoreBtn" style="background:#6c5ce7;margin-right:0.5rem;">🏪 <span class="btn-text">ROM Store</span></button>
   <button class="nav-upload-btn" id="navUploadBtn">📤 <span class="btn-text">Upload</span></button>
+  <button class="nav-upload-btn" id="navAuthBtn" style="background:#00b894;margin-left:0.5rem;">👤 <span class="btn-text" id="authBtnText">Login</span></button>
 </nav>
 
 <!-- ── Hero (injected by JS) ── -->
@@ -479,9 +480,15 @@
     <h2>🏪 ROM Store</h2>
     <p style="color:#888;font-size:0.82rem;margin-bottom:1rem;">Browse and download ROMs from romsgames.net</p>
 
-    <div style="display:flex;gap:0.6rem;margin-bottom:1rem;flex-wrap:wrap;">
+    <div style="display:flex;gap:0.6rem;margin-bottom:0.6rem;flex-wrap:wrap;">
+      <div style="flex:1;min-width:200px;position:relative;">
+        <span style="position:absolute;left:0.7rem;top:50%;transform:translateY(-50%);color:#666;font-size:0.85rem;pointer-events:none;">🔍</span>
+        <input type="text" id="storeSearch" placeholder="Search all ROMs..." style="width:100%;padding:0.5rem 0.7rem 0.5rem 2rem;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#f0f0f0;font-size:0.85rem;font-family:inherit;outline:none;">
+      </div>
       <select id="storeSystem" style="flex:0 0 180px;padding:0.5rem 0.7rem;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#f0f0f0;font-size:0.85rem;font-family:inherit;outline:none;">
       </select>
+    </div>
+    <div style="display:flex;gap:0.6rem;margin-bottom:1rem;flex-wrap:wrap;align-items:center;">
       <button id="storePrev" style="padding:0.4rem 0.8rem;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#aaa;cursor:pointer;font-family:inherit;">← Prev</button>
       <span id="storePageInfo" style="padding:0.5rem 0.5rem;color:#888;font-size:0.82rem;align-self:center;"></span>
       <button id="storeNext" style="padding:0.4rem 0.8rem;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#aaa;cursor:pointer;font-family:inherit;">Next →</button>
@@ -505,6 +512,42 @@
 
 <!-- ── Hidden cover upload ── -->
 <input type="file" id="coverFileInput" accept="image/*" hidden>
+
+<!-- ── Auth Modal ── -->
+<div class="modal-overlay" id="authModal">
+  <div class="modal" style="max-width:400px;">
+    <button class="modal-close" id="authModalClose">✕</button>
+    <h2 id="authModalTitle">👤 Login</h2>
+    <p style="color:#888;font-size:0.82rem;margin-bottom:1rem;">Login to save your game progress separately from other players.</p>
+    <div id="authFormFields">
+      <div id="authNameField" style="display:none;margin-bottom:0.8rem;">
+        <label style="display:block;color:#aaa;font-size:0.8rem;font-weight:600;margin-bottom:0.3rem;">NAME</label>
+        <input type="text" id="authName" placeholder="Your name" style="width:100%;padding:0.55rem 0.8rem;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#f0f0f0;font-size:0.9rem;font-family:inherit;outline:none;">
+      </div>
+      <div style="margin-bottom:0.8rem;">
+        <label style="display:block;color:#aaa;font-size:0.8rem;font-weight:600;margin-bottom:0.3rem;">EMAIL</label>
+        <input type="email" id="authEmail" placeholder="you@example.com" style="width:100%;padding:0.55rem 0.8rem;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#f0f0f0;font-size:0.9rem;font-family:inherit;outline:none;">
+      </div>
+      <div style="margin-bottom:1rem;">
+        <label style="display:block;color:#aaa;font-size:0.8rem;font-weight:600;margin-bottom:0.3rem;">PASSWORD</label>
+        <input type="password" id="authPassword" placeholder="••••••••" style="width:100%;padding:0.55rem 0.8rem;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#f0f0f0;font-size:0.9rem;font-family:inherit;outline:none;">
+      </div>
+      <div id="authError" style="color:#e94560;font-size:0.82rem;margin-bottom:0.8rem;display:none;"></div>
+      <button id="authSubmit" class="modal-submit" style="width:100%;padding:0.65rem;background:#00b894;color:#fff;border:none;border-radius:8px;font-size:0.9rem;font-weight:600;cursor:pointer;font-family:inherit;">Login</button>
+      <p style="text-align:center;margin-top:0.8rem;font-size:0.82rem;color:#888;">
+        <span id="authToggleText">Don't have an account?</span>
+        <a href="#" id="authToggle" style="color:#00b894;text-decoration:none;font-weight:600;"> Register</a>
+      </p>
+    </div>
+    <div id="authLoggedIn" style="display:none;text-align:center;">
+      <div style="font-size:3rem;margin-bottom:0.8rem;">👤</div>
+      <div style="font-size:1.1rem;font-weight:700;color:#fff;margin-bottom:0.3rem;" id="authUserName"></div>
+      <div style="font-size:0.85rem;color:#888;margin-bottom:1.5rem;" id="authUserEmail"></div>
+      <p style="color:#666;font-size:0.8rem;margin-bottom:1.2rem;">Your game progress is saved separately from other players.</p>
+      <button id="authLogout" style="width:100%;padding:0.6rem;background:#e94560;color:#fff;border:none;border-radius:8px;font-size:0.9rem;font-weight:600;cursor:pointer;font-family:inherit;">Logout</button>
+    </div>
+  </div>
+</div>
 
 <script>
 const SYSTEM_META = {
@@ -751,6 +794,7 @@ function showCtxMenu(x, y) {
   const menu = document.getElementById('ctxMenu');
   menu.innerHTML = `
     <button onclick="triggerCoverUpload()">🖼️ Upload Cover Art</button>
+    <button onclick="autoFetchCover()">🔍 Find Cover Online</button>
     <hr>
     <button class="danger" onclick="deleteRom()">🗑️ Delete ROM</button>`;
   menu.style.display = 'block';
@@ -793,6 +837,26 @@ async function deleteRom() {
     const res = await fetch(`/api/roms/${ctxTarget.system}/${encodeURIComponent(ctxTarget.file)}`, { method: 'DELETE' });
     if (res.ok) loadSystems();
   } catch (e) { alert('Delete failed'); }
+}
+
+// ── Auto-fetch cover art ──
+async function autoFetchCover() {
+  hideCtxMenu();
+  if (!ctxTarget) return;
+  showStoreNotification('<div class="loader-spinner" style="width:20px;height:20px;border-width:2px;flex-shrink:0;"></div> Searching cover for ' + escHtml(ctxTarget.name) + '...', 'info');
+  try {
+    const res = await fetch(`/api/covers/fetch/${ctxTarget.system}/${encodeURIComponent(ctxTarget.name)}`, { method: 'POST' });
+    const data = await res.json();
+    if (data.ok) {
+      showStoreNotification('✅ Cover found for ' + escHtml(ctxTarget.name), 'success');
+      loadSystems();
+    } else {
+      showStoreNotification('❌ ' + (data.error || 'No cover found'), 'error');
+    }
+  } catch (e) {
+    showStoreNotification('❌ Cover search failed', 'error');
+  }
+  setTimeout(hideStoreNotification, 3000);
 }
 
 // ── Upload Modal ──
@@ -948,8 +1012,61 @@ function populateStoreSystemSelect() {
 document.getElementById('storeSystem').addEventListener('change', function() {
   storeCurrentSystem = this.value;
   storePage = 1;
+  document.getElementById('storeSearch').value = '';
   browseStore();
 });
+
+// Store search
+let storeSearchDebounce = null;
+document.getElementById('storeSearch').addEventListener('input', function() {
+  const q = this.value.trim();
+  clearTimeout(storeSearchDebounce);
+  if (!q) { storePage = 1; browseStore(); return; }
+  storeSearchDebounce = setTimeout(() => searchStore(q), 400);
+});
+
+async function searchStore(q) {
+  const grid = document.getElementById('storeGrid');
+  const loading = document.getElementById('storeLoading');
+  const empty = document.getElementById('storeEmpty');
+  const pageInfo = document.getElementById('storePageInfo');
+  grid.innerHTML = '';
+  empty.style.display = 'none';
+  loading.style.display = '';
+  pageInfo.textContent = '';
+
+  try {
+    const res = await fetch('/api/store/search?q=' + encodeURIComponent(q));
+    const data = await res.json();
+    loading.style.display = 'none';
+
+    if (!data.roms || data.roms.length === 0) {
+      empty.style.display = '';
+      empty.innerHTML = '<div style="font-size:2rem;margin-bottom:0.5rem;">🔍</div><p>No results for "' + escHtml(q) + '"</p>';
+      return;
+    }
+
+    pageInfo.textContent = data.roms.length + ' results';
+    for (const rom of data.roms) {
+      const card = document.createElement('div');
+      card.className = 'store-card';
+      const imgSrc = rom.cover || '';
+      const sysName = STORE_SYSTEM_NAMES[rom.system] || rom.system;
+      card.innerHTML = `
+        ${imgSrc ? `<img class="store-card-img" src="${escAttr(imgSrc)}" alt="${escAttr(rom.name)}" loading="lazy">` :
+          `<div class="store-card-img" style="display:flex;align-items:center;justify-content:center;font-size:2rem;opacity:0.4;">${(SYSTEM_META[rom.system]||{icon:'🎮'}).icon}</div>`}
+        <div class="store-card-info">
+          <div class="store-card-name" title="${escAttr(rom.name)}">${escHtml(rom.name)}</div>
+          <div style="font-size:0.65rem;color:#888;margin-bottom:0.3rem;">${escHtml(sysName)}</div>
+          <button class="store-dl-btn" data-slug="${escAttr(rom.slug)}" data-system="${escAttr(rom.system)}">⬇ Download & Play</button>
+        </div>`;
+      grid.appendChild(card);
+    }
+  } catch (e) {
+    loading.style.display = 'none';
+    grid.innerHTML = '<p style="color:#e94560;text-align:center;padding:2rem;grid-column:1/-1;">Search failed</p>';
+  }
+}
 
 document.getElementById('storePrev').addEventListener('click', function() {
   if (storePage > 1) { storePage--; browseStore(); }
@@ -1077,7 +1194,116 @@ document.getElementById('storeGrid').addEventListener('click', async function(e)
   }
 });
 
+// ── Auth ──
+let currentUser = null;
+let authToken = localStorage.getItem('retroplay_token') || null;
+let authIsRegister = false;
+
+function updateAuthUI() {
+  const btn = document.getElementById('authBtnText');
+  if (currentUser) {
+    btn.textContent = currentUser.name;
+    document.getElementById('navAuthBtn').style.background = '#00b894';
+  } else {
+    btn.textContent = 'Login';
+    document.getElementById('navAuthBtn').style.background = '#00b894';
+  }
+}
+
+function openAuthModal() {
+  const modal = document.getElementById('authModal');
+  modal.classList.add('open');
+  document.getElementById('authError').style.display = 'none';
+  if (currentUser) {
+    document.getElementById('authFormFields').style.display = 'none';
+    document.getElementById('authLoggedIn').style.display = '';
+    document.getElementById('authUserName').textContent = currentUser.name;
+    document.getElementById('authUserEmail').textContent = currentUser.email;
+    document.getElementById('authModalTitle').textContent = '👤 Profile';
+  } else {
+    document.getElementById('authFormFields').style.display = '';
+    document.getElementById('authLoggedIn').style.display = 'none';
+    setAuthMode(false);
+  }
+}
+
+function closeAuthModal() {
+  document.getElementById('authModal').classList.remove('open');
+}
+
+function setAuthMode(isReg) {
+  authIsRegister = isReg;
+  document.getElementById('authNameField').style.display = isReg ? '' : 'none';
+  document.getElementById('authSubmit').textContent = isReg ? 'Create Account' : 'Login';
+  document.getElementById('authToggleText').textContent = isReg ? 'Already have an account?' : "Don't have an account?";
+  document.getElementById('authToggle').textContent = isReg ? ' Login' : ' Register';
+  document.getElementById('authModalTitle').textContent = isReg ? '📝 Register' : '👤 Login';
+}
+
+document.getElementById('navAuthBtn').addEventListener('click', openAuthModal);
+document.getElementById('authModalClose').addEventListener('click', closeAuthModal);
+document.getElementById('authModal').addEventListener('click', function(e) { if (e.target === this) closeAuthModal(); });
+document.getElementById('authToggle').addEventListener('click', function(e) { e.preventDefault(); setAuthMode(!authIsRegister); });
+
+document.getElementById('authSubmit').addEventListener('click', async function() {
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value;
+  const name = document.getElementById('authName').value.trim();
+  const errEl = document.getElementById('authError');
+  errEl.style.display = 'none';
+
+  const endpoint = authIsRegister ? '/api/auth/register' : '/api/auth/login';
+  const body = authIsRegister ? { email, password, name } : { email, password };
+
+  try {
+    const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const data = await res.json();
+    if (data.ok) {
+      authToken = data.token;
+      currentUser = data.user;
+      localStorage.setItem('retroplay_token', authToken);
+      updateAuthUI();
+      closeAuthModal();
+      showStoreNotification('✅ Welcome, ' + escHtml(currentUser.name) + '!', 'success');
+      setTimeout(hideStoreNotification, 2000);
+    } else {
+      errEl.textContent = data.error || 'Failed';
+      errEl.style.display = '';
+    }
+  } catch (e) {
+    errEl.textContent = 'Connection error';
+    errEl.style.display = '';
+  }
+});
+
+document.getElementById('authLogout').addEventListener('click', function() {
+  currentUser = null;
+  authToken = null;
+  localStorage.removeItem('retroplay_token');
+  updateAuthUI();
+  closeAuthModal();
+  showStoreNotification('👋 Logged out', 'info');
+  setTimeout(hideStoreNotification, 2000);
+});
+
+// Check existing token on load
+async function checkAuth() {
+  if (!authToken) return;
+  try {
+    const res = await fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + authToken } });
+    if (res.ok) {
+      const data = await res.json();
+      currentUser = data.user;
+      updateAuthUI();
+    } else {
+      localStorage.removeItem('retroplay_token');
+      authToken = null;
+    }
+  } catch(e) {}
+}
+
 // ── Init ──
+checkAuth();
 loadSystems();
 </script>
 </body>

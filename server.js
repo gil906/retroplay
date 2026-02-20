@@ -7,14 +7,35 @@ const https = require('https');
 const http = require('http');
 const cors = require('cors');
 const { Server: SocketIO } = require('socket.io');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
 const app = express();
 app.use(cors({ origin: '*' }));
+app.use(express.json());
 const server = http.createServer(app);
 
 const ROMS_DIR = '/data/roms';
 const SAVES_DIR = '/data/saves';
 const COVERS_DIR = '/data/covers';
+const USERS_FILE = '/data/users.json';
+const JWT_SECRET = process.env.JWT_SECRET || 'retroplay-lan-secret-' + (fs.existsSync(USERS_FILE) ? fs.statSync(USERS_FILE).birthtimeMs : Date.now());
+
+// ── User helpers ──
+function loadUsers() {
+  try { return JSON.parse(fs.readFileSync(USERS_FILE, 'utf8')); } catch(e) { return []; }
+}
+function saveUsers(users) {
+  fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
+}
+function authMiddleware(req, res, next) {
+  const token = (req.headers.authorization || '').replace('Bearer ', '');
+  if (!token) return res.status(401).json({ error: 'Not logged in' });
+  try {
+    req.user = jwt.verify(token, JWT_SECRET);
+    next();
+  } catch(e) { res.status(401).json({ error: 'Invalid token' }); }
+}
 
 // Multer storage: saves uploaded ROMs to the correct system directory
 const romStorage = multer.diskStorage({
@@ -123,10 +144,18 @@ app.delete('/api/roms/:system/:file', (req, res) => {
   }
 });
 
-// API: Upload save state
+// API: Upload save state (per-user if logged in, fallback to shared)
 app.put('/api/saves/:system/:file', express.raw({ limit: '50mb', type: '*/*' }), (req, res) => {
   try {
-    const dir = path.join(SAVES_DIR, req.params.system);
+    let saveBase = SAVES_DIR;
+    const token = (req.headers.authorization || '').replace('Bearer ', '');
+    if (token) {
+      try {
+        const user = jwt.verify(token, JWT_SECRET);
+        saveBase = path.join(SAVES_DIR, 'users', user.id);
+      } catch(e) {}
+    }
+    const dir = path.join(saveBase, req.params.system);
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(path.join(dir, req.params.file), req.body);
     res.json({ ok: true });
@@ -135,11 +164,49 @@ app.put('/api/saves/:system/:file', express.raw({ limit: '50mb', type: '*/*' }),
   }
 });
 
-// API: Download save state
+// API: Download save state (per-user if logged in)
 app.get('/api/saves/:system/:file', (req, res) => {
-  const savePath = path.join(SAVES_DIR, req.params.system, req.params.file);
+  let saveBase = SAVES_DIR;
+  const token = (req.headers.authorization || '').replace('Bearer ', '');
+  if (token) {
+    try {
+      const user = jwt.verify(token, JWT_SECRET);
+      saveBase = path.join(SAVES_DIR, 'users', user.id);
+    } catch(e) {}
+  }
+  const savePath = path.join(saveBase, req.params.system, req.params.file);
   if (fs.existsSync(savePath)) return res.sendFile(savePath);
   res.status(404).json({ error: 'not found' });
+});
+
+// ── Auth API ──
+app.post('/api/auth/register', (req, res) => {
+  const { email, password, name } = req.body;
+  if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
+  if (password.length < 4) return res.status(400).json({ error: 'Password must be at least 4 characters' });
+  const users = loadUsers();
+  if (users.find(u => u.email === email.toLowerCase())) return res.status(409).json({ error: 'Email already registered' });
+  const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  const hash = bcrypt.hashSync(password, 10);
+  const user = { id, email: email.toLowerCase(), name: name || email.split('@')[0], hash, created: new Date().toISOString() };
+  users.push(user);
+  saveUsers(users);
+  const token = jwt.sign({ id: user.id, email: user.email, name: user.name }, JWT_SECRET, { expiresIn: '30d' });
+  res.json({ ok: true, token, user: { id: user.id, email: user.email, name: user.name } });
+});
+
+app.post('/api/auth/login', (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
+  const users = loadUsers();
+  const user = users.find(u => u.email === email.toLowerCase());
+  if (!user || !bcrypt.compareSync(password, user.hash)) return res.status(401).json({ error: 'Invalid email or password' });
+  const token = jwt.sign({ id: user.id, email: user.email, name: user.name }, JWT_SECRET, { expiresIn: '30d' });
+  res.json({ ok: true, token, user: { id: user.id, email: user.email, name: user.name } });
+});
+
+app.get('/api/auth/me', authMiddleware, (req, res) => {
+  res.json({ user: req.user });
 });
 
 // API: Search ROMs across all systems
@@ -344,6 +411,99 @@ app.post('/api/store/download', express.json(), async (req, res) => {
     res.json({ ok: true, file: fileName, system, alreadyExists: false });
   } catch (e) {
     res.status(500).json({ error: 'Download failed: ' + e.message });
+  }
+});
+
+// Search ROMs on romsgames.net
+app.get('/api/store/search', async (req, res) => {
+  const q = (req.query.q || '').trim();
+  if (!q) return res.json({ roms: [] });
+
+  try {
+    const url = `https://www.romsgames.net/search/?q=${encodeURIComponent(q)}`;
+    const html = await fetchUrl(url);
+    const $ = cheerio.load(html);
+    const roms = [];
+    const seen = new Set();
+
+    $('a[href]').each((_, el) => {
+      const href = $(el).attr('href');
+      if (!href || !href.includes('-rom-')) return;
+      const slug = href.replace(/^\/|\/$/g, '');
+      if (seen.has(slug)) return;
+      seen.add(slug);
+
+      // Determine system from slug prefix
+      let system = null;
+      for (const [sysId, sysCfg] of Object.entries(STORE_SYSTEMS)) {
+        if (slug.startsWith(sysCfg.romPrefix)) { system = sysId; break; }
+      }
+      if (!system) return;
+
+      const name = $(el).find('div').last().text().trim() || $(el).text().trim().replace(/\s*ROM$/i, '');
+      if (!name) return;
+      const img = $(el).find('img');
+      let cover = img.attr('src') || '';
+      if (cover.startsWith('//')) cover = 'https:' + cover;
+      if (cover.includes('no-cover')) cover = '';
+
+      roms.push({ name, slug, cover, system });
+    });
+
+    res.json({ roms });
+  } catch (e) {
+    res.status(500).json({ error: 'Search failed: ' + e.message });
+  }
+});
+
+// Auto-fetch cover art for a ROM by searching romsgames.net
+app.post('/api/covers/fetch/:system/:romName', async (req, res) => {
+  const { system, romName } = req.params;
+  if (!SYSTEMS[system]) return res.status(400).json({ error: 'Unknown system' });
+
+  try {
+    // Search romsgames.net for the game name
+    const cleanName = romName.replace(/\s*[\(\[][^\)\]]*[\)\]]\s*/g, '').replace(/[_-]/g, ' ').trim();
+    const searchUrl = `https://www.romsgames.net/search/?q=${encodeURIComponent(cleanName)}`;
+    const html = await fetchUrl(searchUrl);
+    const $ = cheerio.load(html);
+
+    // Find the best matching ROM page
+    const storeSys = STORE_SYSTEMS[system];
+    let bestSlug = null;
+    $('a[href]').each((_, el) => {
+      if (bestSlug) return;
+      const href = $(el).attr('href');
+      if (!href || !href.includes('-rom-')) return;
+      const slug = href.replace(/^\/|\/$/g, '');
+      if (storeSys && slug.startsWith(storeSys.romPrefix)) bestSlug = slug;
+    });
+
+    if (!bestSlug) return res.status(404).json({ error: 'No matching game found' });
+
+    // Fetch the ROM page to get cover image
+    const pageHtml = await fetchUrl(`https://www.romsgames.net/${bestSlug}/`);
+    const $page = cheerio.load(pageHtml);
+    let coverUrl = '';
+    $page('img').each((_, el) => {
+      if (coverUrl) return;
+      const src = $page(el).attr('src') || '';
+      if (src.includes('cache.downloadroms') || src.includes('static')) {
+        coverUrl = src.startsWith('//') ? 'https:' + src : src;
+      }
+    });
+
+    if (!coverUrl) return res.status(404).json({ error: 'No cover image found' });
+
+    const coverDir = path.join(COVERS_DIR, system);
+    fs.mkdirSync(coverDir, { recursive: true });
+    const coverExt = coverUrl.match(/\.(jpe?g|png|webp)/i)?.[0] || '.jpg';
+    const coverPath = path.join(coverDir, romName + coverExt);
+    await downloadFile(coverUrl, coverPath);
+
+    res.json({ ok: true, cover: '/covers/' + system + '/' + romName + coverExt });
+  } catch (e) {
+    res.status(500).json({ error: 'Cover fetch failed: ' + e.message });
   }
 });
 

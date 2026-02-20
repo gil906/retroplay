@@ -654,7 +654,7 @@ function gameCardHtml(rom, sys) {
   const bgStyle = rom.cover
     ? '' : `background:linear-gradient(135deg,${meta.gradient[0]},${meta.gradient[1]});`;
   const coverImg = rom.cover
-    ? `<div class="game-card-cover"><img src="/covers/${sys.id}/${rom.cover}" alt="${escHtml(rom.name)}" loading="lazy"></div>`
+    ? `<div class="game-card-cover"><img src="${rom.cover}" alt="${escHtml(rom.name)}" loading="lazy"></div>`
     : `<div class="game-card-bg" style="${bgStyle}"><span class="card-icon">${meta.icon}</span></div>`;
   return `<div class="game-card" data-system="${sys.id}" data-core="${sys.core}" data-file="${escAttr(rom.file)}" data-name="${escAttr(rom.name)}">
     <a class="game-card-link" href="${playerUrl}">

@@ -97,6 +97,11 @@
       window.EJS_startOnLoaded = true;
       window.EJS_fullscreenOnLoaded = false;
 
+      // Netplay (LAN multiplayer)
+      window.EJS_netplayServer = window.location.origin;
+      // Generate a consistent game ID from the ROM filename
+      window.EJS_gameID = Array.from(romFile).reduce(function(h, c) { return ((h << 5) - h + c.charCodeAt(0)) | 0; }, 0);
+
       // Hide loading overlay once EmulatorJS takes over
       window.EJS_onGameStart = function() {
         document.getElementById('loading-overlay').classList.add('hidden');

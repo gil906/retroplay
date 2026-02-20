@@ -9,6 +9,7 @@ const cors = require('cors');
 const { Server: SocketIO } = require('socket.io');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 
 const app = express();
 app.use(cors({ origin: '*' }));
@@ -20,6 +21,7 @@ const SAVES_DIR = '/data/saves';
 const COVERS_DIR = '/data/covers';
 const USERS_FILE = '/data/users.json';
 const JWT_SECRET = process.env.JWT_SECRET || 'retroplay-lan-secret-' + (fs.existsSync(USERS_FILE) ? fs.statSync(USERS_FILE).birthtimeMs : Date.now());
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 
 // ── User helpers ──
 function loadUsers() {
@@ -209,6 +211,61 @@ app.get('/api/auth/me', authMiddleware, (req, res) => {
   res.json({ user: req.user });
 });
 
+// Google OAuth: verify ID token and create/login user
+app.post('/api/auth/google', async (req, res) => {
+  const { credential } = req.body;
+  if (!credential) return res.status(400).json({ error: 'Missing credential' });
+  if (!GOOGLE_CLIENT_ID) return res.status(500).json({ error: 'Google Sign-In not configured on server' });
+
+  try {
+    // Verify the Google ID token by fetching Google's tokeninfo endpoint
+    const verifyUrl = `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`;
+    const tokenData = await new Promise((resolve, reject) => {
+      https.get(verifyUrl, (resp) => {
+        let data = '';
+        resp.on('data', chunk => data += chunk);
+        resp.on('end', () => {
+          try { resolve(JSON.parse(data)); } catch(e) { reject(new Error('Invalid response')); }
+        });
+      }).on('error', reject);
+    });
+
+    if (tokenData.error || tokenData.aud !== GOOGLE_CLIENT_ID) {
+      return res.status(401).json({ error: 'Invalid Google token' });
+    }
+
+    const email = tokenData.email;
+    const name = tokenData.name || email.split('@')[0];
+    const googleId = tokenData.sub;
+
+    const users = loadUsers();
+    let user = users.find(u => u.email === email.toLowerCase());
+
+    if (!user) {
+      // Auto-register
+      const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      user = { id, email: email.toLowerCase(), name, googleId, hash: null, created: new Date().toISOString() };
+      users.push(user);
+      saveUsers(users);
+    } else if (!user.googleId) {
+      // Link Google to existing account
+      user.googleId = googleId;
+      if (!user.name || user.name === email.split('@')[0]) user.name = name;
+      saveUsers(users);
+    }
+
+    const token = jwt.sign({ id: user.id, email: user.email, name: user.name }, JWT_SECRET, { expiresIn: '30d' });
+    res.json({ ok: true, token, user: { id: user.id, email: user.email, name: user.name } });
+  } catch (e) {
+    res.status(500).json({ error: 'Google auth failed: ' + e.message });
+  }
+});
+
+// Expose Google Client ID to frontend
+app.get('/api/auth/config', (req, res) => {
+  res.json({ googleClientId: GOOGLE_CLIENT_ID || null });
+});
+
 // API: Search ROMs across all systems
 app.get('/api/search', (req, res) => {
   const q = (req.query.q || '').toLowerCase().trim();
@@ -300,21 +357,30 @@ function postForm(url, body) {
   });
 }
 
-function downloadFile(url, destPath) {
+function downloadFile(url, destPath, onProgress) {
   return new Promise((resolve, reject) => {
     const mod = url.startsWith('https') ? https : http;
     mod.get(url, { headers: { 'User-Agent': 'Mozilla/5.0', 'Referer': 'https://www.romsgames.net/' } }, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        return downloadFile(res.headers.location, destPath).then(resolve, reject);
+        return downloadFile(res.headers.location, destPath, onProgress).then(resolve, reject);
       }
       if (res.statusCode !== 200) return reject(new Error('HTTP ' + res.statusCode));
+      const totalBytes = parseInt(res.headers['content-length'], 10) || 0;
+      let receivedBytes = 0;
       const ws = fs.createWriteStream(destPath);
+      res.on('data', chunk => {
+        receivedBytes += chunk.length;
+        if (onProgress) onProgress(receivedBytes, totalBytes);
+      });
       res.pipe(ws);
       ws.on('finish', () => ws.close(resolve));
       ws.on('error', reject);
     }).on('error', reject);
   });
 }
+
+// In-memory download progress tracking
+const downloadProgress = new Map();
 
 // Browse ROMs from romsgames.net
 app.get('/api/store/browse', async (req, res) => {
@@ -358,24 +424,35 @@ app.get('/api/store/browse', async (req, res) => {
   }
 });
 
-// Download a ROM from romsgames.net
-app.post('/api/store/download', express.json(), async (req, res) => {
+// Download a ROM from romsgames.net (with progress tracking)
+app.post('/api/store/download', async (req, res) => {
   const { slug, system } = req.body;
   if (!slug || !system) return res.status(400).json({ error: 'slug and system are required' });
   if (!SYSTEMS[system]) return res.status(400).json({ error: 'Unknown system' });
 
+  const dlId = crypto.randomBytes(8).toString('hex');
+  downloadProgress.set(dlId, { status: 'preparing', received: 0, total: 0, startTime: Date.now() });
+
+  // Return download ID immediately so client can track progress
+  res.json({ ok: true, downloadId: dlId, status: 'started' });
+
   try {
     // Step 1: Fetch the ROM page to get the mediaId
+    downloadProgress.set(dlId, { ...downloadProgress.get(dlId), status: 'fetching_info' });
     const pageUrl = `https://www.romsgames.net/${slug}/`;
     const html = await fetchUrl(pageUrl);
     const $ = cheerio.load(html);
     const mediaId = $('button[data-media-id]').attr('data-media-id');
-    if (!mediaId) return res.status(404).json({ error: 'ROM not found or no download available' });
+    if (!mediaId) {
+      downloadProgress.set(dlId, { ...downloadProgress.get(dlId), status: 'error', error: 'ROM not found' });
+      return;
+    }
 
     // Step 2: POST to get the download URL
     const dlInfo = await postForm(`https://www.romsgames.net/${slug}/?download`, { mediaId });
     if (!dlInfo || !dlInfo.downloadUrl) {
-      return res.status(404).json({ error: 'Download URL not available' });
+      downloadProgress.set(dlId, { ...downloadProgress.get(dlId), status: 'error', error: 'Download URL not available' });
+      return;
     }
 
     // Step 3: Download the file
@@ -384,16 +461,19 @@ app.post('/api/store/download', express.json(), async (req, res) => {
     fs.mkdirSync(romDir, { recursive: true });
     const destPath = path.join(romDir, fileName);
 
-    // Check if already downloaded
     if (fs.existsSync(destPath)) {
-      return res.json({ ok: true, file: fileName, system, alreadyExists: true });
+      downloadProgress.set(dlId, { status: 'done', file: fileName, system, alreadyExists: true });
+      return;
     }
 
-    // The download URL requires mediaId and attach query params
+    downloadProgress.set(dlId, { ...downloadProgress.get(dlId), status: 'downloading', received: 0, total: 0, startTime: Date.now() });
     const dlUrl = dlInfo.downloadUrl + '?mediaId=' + mediaId + '&attach=' + (dlInfo.downloadName || 'file.zip');
-    await downloadFile(dlUrl, destPath);
+    await downloadFile(dlUrl, destPath, (received, total) => {
+      const p = downloadProgress.get(dlId);
+      if (p) downloadProgress.set(dlId, { ...p, status: 'downloading', received, total });
+    });
 
-    // Step 4: Also save the cover image if available
+    // Step 4: Also save the cover image
     const coverUrl = dlInfo.asset?.thumbnailUrl || '';
     if (coverUrl) {
       try {
@@ -408,10 +488,40 @@ app.post('/api/store/download', express.json(), async (req, res) => {
       } catch(e) { /* cover download is best-effort */ }
     }
 
-    res.json({ ok: true, file: fileName, system, alreadyExists: false });
+    downloadProgress.set(dlId, { status: 'done', file: fileName, system, alreadyExists: false });
+    // Clean up after 60s
+    setTimeout(() => downloadProgress.delete(dlId), 60000);
   } catch (e) {
-    res.status(500).json({ error: 'Download failed: ' + e.message });
+    downloadProgress.set(dlId, { status: 'error', error: e.message });
+    setTimeout(() => downloadProgress.delete(dlId), 60000);
   }
+});
+
+// SSE endpoint for download progress
+app.get('/api/store/download-progress/:id', (req, res) => {
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+  });
+
+  const dlId = req.params.id;
+  const interval = setInterval(() => {
+    const p = downloadProgress.get(dlId);
+    if (!p) {
+      res.write('data: ' + JSON.stringify({ status: 'unknown' }) + '\n\n');
+      clearInterval(interval);
+      res.end();
+      return;
+    }
+    res.write('data: ' + JSON.stringify(p) + '\n\n');
+    if (p.status === 'done' || p.status === 'error') {
+      clearInterval(interval);
+      res.end();
+    }
+  }, 500);
+
+  req.on('close', () => clearInterval(interval));
 });
 
 // Search ROMs on romsgames.net

@@ -101,6 +101,13 @@
       window.EJS_netplayServer = window.location.origin;
       // Generate a consistent game ID from the ROM filename
       window.EJS_gameID = Array.from(romFile).reduce(function(h, c) { return ((h << 5) - h + c.charCodeAt(0)) | 0; }, 0);
+      // ICE servers for WebRTC (STUN + local TURN)
+      var turnHost = window.location.hostname;
+      window.EJS_netplayICEServers = [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'turn:' + turnHost + ':3478', username: 'retroplay', credential: 'retroplay123' }
+      ];
 
       // Per-user save data: override save/load URLs with auth token
       var authToken = localStorage.getItem('retroplay_token');

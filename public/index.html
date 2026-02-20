@@ -8,13 +8,44 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
+  /* ── Theme Variables ── */
+  :root {
+    --bg-primary: #0a0a14;
+    --bg-secondary: #12121f;
+    --bg-card: #1a1a2e;
+    --bg-card-border: #2a2a4a;
+    --bg-nav: rgba(10,10,20,0.95);
+    --bg-input: rgba(255,255,255,0.07);
+    --bg-input-border: rgba(255,255,255,0.08);
+    --text-primary: #f0f0f0;
+    --text-secondary: #888;
+    --text-muted: #666;
+    --accent: #e94560;
+    --accent-hover: #d6364f;
+    --transition-theme: background 0.4s ease, color 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
+  }
+  [data-theme="light"] {
+    --bg-primary: #f5f5f8;
+    --bg-secondary: #ffffff;
+    --bg-card: #ffffff;
+    --bg-card-border: #e0e0e8;
+    --bg-nav: rgba(255,255,255,0.95);
+    --bg-input: rgba(0,0,0,0.04);
+    --bg-input-border: rgba(0,0,0,0.1);
+    --text-primary: #1a1a2e;
+    --text-secondary: #555;
+    --text-muted: #999;
+    --accent: #e94560;
+    --accent-hover: #d6364f;
+  }
   *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
   body {
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    background: #0a0a14;
-    color: #f0f0f0;
+    background: var(--bg-primary);
+    color: var(--text-primary);
     min-height: 100vh;
     overflow-x: hidden;
+    transition: var(--transition-theme);
   }
 
   /* ── Navbar ── */
@@ -22,9 +53,10 @@
     position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
     display: flex; align-items: center; justify-content: space-between;
     padding: 0 1.5rem; height: 60px;
-    background: rgba(10,10,20,0.95);
+    background: var(--bg-nav);
     backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-    border-bottom: 1px solid rgba(255,255,255,0.06);
+    border-bottom: 1px solid var(--bg-input-border);
+    transition: var(--transition-theme);
   }
   .nav-logo {
     font-size: 1.4rem; font-weight: 800; white-space: nowrap;
@@ -37,12 +69,12 @@
   }
   .nav-search input {
     width: 100%; padding: 0.55rem 1rem 0.55rem 2.4rem;
-    background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 24px; color: #f0f0f0; font-size: 0.9rem;
+    background: var(--bg-input); border: 1px solid var(--bg-input-border);
+    border-radius: 24px; color: var(--text-primary); font-size: 0.9rem;
     font-family: inherit; outline: none; transition: border-color 0.2s, background 0.2s;
   }
-  .nav-search input:focus { border-color: #e94560; background: rgba(255,255,255,0.1); }
-  .nav-search input::placeholder { color: #666; }
+  .nav-search input:focus { border-color: #e94560; background: var(--bg-input); }
+  .nav-search input::placeholder { color: var(--text-muted); }
   .nav-search-icon {
     position: absolute; left: 0.8rem; top: 50%; transform: translateY(-50%);
     color: #666; font-size: 0.9rem; pointer-events: none;
@@ -97,7 +129,7 @@
   /* ── Filter Bar ── */
   .filter-bar {
     position: sticky; top: 60px; z-index: 900;
-    background: rgba(10,10,20,0.92); backdrop-filter: blur(8px);
+    background: var(--bg-nav); backdrop-filter: blur(8px);
     border-bottom: 1px solid rgba(255,255,255,0.05);
     padding: 0.7rem 1.5rem;
   }
@@ -153,8 +185,8 @@
   /* ── Game Card ── */
   .game-card {
     position: relative; border-radius: 12px; overflow: hidden;
-    background: #12121f; border: 1px solid #1e1e35;
-    aspect-ratio: 3 / 4; transition: transform 0.2s ease, box-shadow 0.2s ease;
+    background: var(--bg-card); border: 1px solid var(--bg-card-border);
+    aspect-ratio: 3 / 4; transition: transform 0.2s ease, box-shadow 0.2s ease, var(--transition-theme);
     cursor: pointer;
   }
   .game-card:hover {
@@ -229,10 +261,11 @@
   /* Context dropdown */
   .ctx-menu {
     position: absolute; z-index: 2000;
-    background: #1a1a2e; border: 1px solid #2a2a4a;
+    background: var(--bg-card); border: 1px solid var(--bg-card-border);
     border-radius: 10px; overflow: hidden; min-width: 170px;
     box-shadow: 0 8px 30px rgba(0,0,0,0.6);
     animation: ctxFade 0.15s ease;
+    transition: var(--transition-theme);
   }
   @keyframes ctxFade { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
   .ctx-menu button {
@@ -253,9 +286,10 @@
   }
   .modal-overlay.open { display: flex; }
   .modal {
-    background: #12121f; border: 1px solid #1e1e35; border-radius: 16px;
+    background: var(--bg-secondary); border: 1px solid var(--bg-card-border); border-radius: 16px;
     width: 90%; max-width: 520px; padding: 2rem;
     position: relative; animation: modalIn 0.2s ease;
+    transition: var(--transition-theme);
   }
   @keyframes modalIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
   .modal-close {
@@ -376,9 +410,9 @@
   #storeGrid::-webkit-scrollbar-track { background: transparent; }
   #storeGrid::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
   .store-card {
-    border-radius: 10px; overflow: hidden; background: #1a1a2e;
-    border: 1px solid #2a2a4a; cursor: pointer;
-    transition: transform 0.2s, box-shadow 0.2s;
+    border-radius: 10px; overflow: hidden; background: var(--bg-card);
+    border: 1px solid var(--bg-card-border); cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s, var(--transition-theme);
   }
   .store-card:hover { transform: scale(1.03); box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
   .store-card-img {
@@ -408,6 +442,68 @@
     #storeModal .modal { padding: 1.2rem; }
   }
 
+  /* ── Theme Toggle ── */
+  .theme-toggle {
+    background: var(--bg-input); border: 1px solid var(--bg-input-border);
+    width: 36px; height: 36px; border-radius: 50%; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem; transition: background 0.3s, transform 0.3s;
+    margin-left: 0.5rem; flex-shrink: 0;
+  }
+  .theme-toggle:hover { transform: scale(1.1); background: var(--accent); }
+
+  /* ── Download Progress Overlay ── */
+  .dl-progress-bar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+    background: var(--bg-secondary); border-bottom: 1px solid var(--bg-card-border);
+    padding: 0.8rem 1.5rem; display: none; flex-direction: column; gap: 0.4rem;
+    animation: slideDown 0.3s ease;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  }
+  .dl-progress-bar.show { display: flex; }
+  @keyframes slideDown { from { transform: translateY(-100%); } to { transform: translateY(0); } }
+  .dl-progress-bar .dl-info {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 0.85rem; color: var(--text-primary);
+  }
+  .dl-progress-bar .dl-info .dl-name { font-weight: 600; }
+  .dl-progress-bar .dl-info .dl-stats { color: var(--text-secondary); font-size: 0.78rem; }
+  .dl-progress-track {
+    width: 100%; height: 6px; background: var(--bg-input);
+    border-radius: 3px; overflow: hidden;
+  }
+  .dl-progress-fill {
+    height: 100%; background: linear-gradient(90deg, #6c5ce7, #e94560);
+    border-radius: 3px; transition: width 0.3s ease;
+    width: 0%;
+  }
+  .dl-progress-fill.indeterminate {
+    width: 30%;
+    animation: indeterminate 1.5s ease-in-out infinite;
+  }
+  @keyframes indeterminate {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(400%); }
+  }
+
+  /* ── Google OAuth Button ── */
+  .google-btn {
+    width: 100%; padding: 0.6rem; margin-bottom: 0.8rem;
+    background: #fff; color: #333; border: 1px solid #ddd;
+    border-radius: 8px; font-size: 0.9rem; font-weight: 600;
+    cursor: pointer; font-family: inherit;
+    display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+    transition: background 0.2s, box-shadow 0.2s;
+  }
+  .google-btn:hover { background: #f5f5f5; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+  .auth-divider {
+    display: flex; align-items: center; gap: 0.8rem;
+    margin: 0.8rem 0; color: var(--text-muted); font-size: 0.8rem;
+  }
+  .auth-divider::before, .auth-divider::after {
+    content: ''; flex: 1; height: 1px; background: var(--bg-card-border);
+  }
+
 </style>
 </head>
 <body>
@@ -422,7 +518,19 @@
   <button class="nav-upload-btn" id="navStoreBtn" style="background:#6c5ce7;margin-right:0.5rem;">🏪 <span class="btn-text">ROM Store</span></button>
   <button class="nav-upload-btn" id="navUploadBtn">📤 <span class="btn-text">Upload</span></button>
   <button class="nav-upload-btn" id="navAuthBtn" style="background:#00b894;margin-left:0.5rem;">👤 <span class="btn-text" id="authBtnText">Login</span></button>
+  <button class="theme-toggle" id="themeToggle" title="Toggle theme">🌙</button>
 </nav>
+
+<!-- ── Download Progress Bar ── -->
+<div class="dl-progress-bar" id="dlProgressBar">
+  <div class="dl-info">
+    <span class="dl-name" id="dlName">Downloading...</span>
+    <span class="dl-stats" id="dlStats"></span>
+  </div>
+  <div class="dl-progress-track">
+    <div class="dl-progress-fill" id="dlProgressFill"></div>
+  </div>
+</div>
 
 <!-- ── Hero (injected by JS) ── -->
 <div id="heroSection"></div>
@@ -520,6 +628,13 @@
     <h2 id="authModalTitle">👤 Login</h2>
     <p style="color:#888;font-size:0.82rem;margin-bottom:1rem;">Login to save your game progress separately from other players.</p>
     <div id="authFormFields">
+      <div id="googleSignInWrapper" style="display:none;">
+        <button class="google-btn" id="googleSignInBtn">
+          <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#34A853" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#FBBC05" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+          Sign in with Google
+        </button>
+        <div class="auth-divider">or</div>
+      </div>
       <div id="authNameField" style="display:none;margin-bottom:0.8rem;">
         <label style="display:block;color:#aaa;font-size:0.8rem;font-weight:600;margin-bottom:0.3rem;">NAME</label>
         <input type="text" id="authName" placeholder="Your name" style="width:100%;padding:0.55rem 0.8rem;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#f0f0f0;font-size:0.9rem;font-family:inherit;outline:none;">
@@ -1143,8 +1258,40 @@ function hideStoreNotification() {
   if (el) { el.style.transform = 'translateY(-100%)'; el.style.opacity = '0'; }
 }
 
+// ── Download Progress Bar ──
+function showDlProgress(name) {
+  const bar = document.getElementById('dlProgressBar');
+  document.getElementById('dlName').textContent = '⬇ Downloading ' + name;
+  document.getElementById('dlStats').textContent = 'Preparing...';
+  document.getElementById('dlProgressFill').style.width = '0%';
+  document.getElementById('dlProgressFill').classList.add('indeterminate');
+  bar.classList.add('show');
+}
+function updateDlProgress(received, total, startTime) {
+  const fill = document.getElementById('dlProgressFill');
+  const stats = document.getElementById('dlStats');
+  fill.classList.remove('indeterminate');
+  if (total > 0) {
+    const pct = Math.round((received / total) * 100);
+    fill.style.width = pct + '%';
+    const elapsed = (Date.now() - startTime) / 1000;
+    const speed = received / elapsed;
+    const remaining = (total - received) / speed;
+    const recMB = (received / 1048576).toFixed(1);
+    const totMB = (total / 1048576).toFixed(1);
+    const eta = remaining > 60 ? Math.round(remaining / 60) + 'm' : Math.round(remaining) + 's';
+    stats.textContent = recMB + ' / ' + totMB + ' MB • ' + eta + ' left';
+  } else {
+    fill.style.width = '50%';
+    const recMB = (received / 1048576).toFixed(1);
+    stats.textContent = recMB + ' MB downloaded...';
+  }
+}
+function hideDlProgress() {
+  document.getElementById('dlProgressBar').classList.remove('show');
+}
+
 document.getElementById('storeGrid').addEventListener('click', async function(e) {
-  // Allow clicking anywhere on the card, not just the button
   const card = e.target.closest('.store-card');
   if (!card) return;
   const btn = card.querySelector('.store-dl-btn');
@@ -1155,7 +1302,7 @@ document.getElementById('storeGrid').addEventListener('click', async function(e)
   const gameName = card.querySelector('.store-card-name')?.textContent || slug;
   btn.disabled = true;
   btn.textContent = '⏳ Downloading...';
-  showStoreNotification('<div class="loader-spinner" style="width:20px;height:20px;border-width:2px;flex-shrink:0;"></div> Downloading ' + escHtml(gameName) + '...', 'info');
+  showDlProgress(gameName);
 
   try {
     const res = await fetch('/api/store/download', {
@@ -1164,32 +1311,60 @@ document.getElementById('storeGrid').addEventListener('click', async function(e)
       body: JSON.stringify({ slug, system }),
     });
     const data = await res.json();
-    if (data.ok) {
-      btn.textContent = data.alreadyExists ? '✅ Already in Library' : '✅ Downloaded!';
-      btn.classList.add('done');
-      loadSystems();
-      if (data.file) {
-        showStoreNotification('✅ ' + escHtml(gameName) + ' ready! Launching...', 'success');
-        const sysInfo = allSystems.find(s => s.id === system);
-        const core = sysInfo ? sysInfo.core : system;
-        setTimeout(() => {
-          hideStoreNotification();
-          window.location.href = `/player.html?system=${system}&core=${core}&rom=${encodeURIComponent(data.file)}`;
-        }, 1200);
-      } else {
-        showStoreNotification('✅ Downloaded ' + escHtml(gameName), 'success');
-        setTimeout(hideStoreNotification, 3000);
-      }
+
+    if (data.downloadId) {
+      // Track progress via SSE
+      const evtSource = new EventSource('/api/store/download-progress/' + data.downloadId);
+      evtSource.onmessage = function(event) {
+        const p = JSON.parse(event.data);
+        if (p.status === 'downloading') {
+          updateDlProgress(p.received, p.total, p.startTime);
+        } else if (p.status === 'fetching_info') {
+          document.getElementById('dlStats').textContent = 'Finding download link...';
+        } else if (p.status === 'done') {
+          evtSource.close();
+          document.getElementById('dlProgressFill').style.width = '100%';
+          document.getElementById('dlStats').textContent = '✅ Complete!';
+          btn.textContent = p.alreadyExists ? '✅ Already in Library' : '✅ Downloaded!';
+          btn.classList.add('done');
+          loadSystems();
+          if (p.file) {
+            document.getElementById('dlName').textContent = '🎮 Launching ' + gameName + '...';
+            const sysInfo = allSystems.find(s => s.id === system);
+            const core = sysInfo ? sysInfo.core : system;
+            setTimeout(() => {
+              hideDlProgress();
+              window.location.href = `/player.html?system=${system}&core=${core}&rom=${encodeURIComponent(p.file)}`;
+            }, 1200);
+          } else {
+            setTimeout(hideDlProgress, 2000);
+          }
+        } else if (p.status === 'error') {
+          evtSource.close();
+          hideDlProgress();
+          btn.textContent = '⬇ Download & Play';
+          btn.disabled = false;
+          showStoreNotification('❌ ' + (p.error || 'Download failed'), 'error');
+          setTimeout(hideStoreNotification, 4000);
+        }
+      };
+      evtSource.onerror = function() {
+        evtSource.close();
+        // Check one more time in case it completed
+        setTimeout(hideDlProgress, 2000);
+      };
     } else {
+      hideDlProgress();
       btn.textContent = '⬇ Download & Play';
       btn.disabled = false;
       showStoreNotification('❌ ' + (data.error || 'Download failed'), 'error');
       setTimeout(hideStoreNotification, 4000);
     }
   } catch (e) {
+    hideDlProgress();
     btn.textContent = '⬇ Download & Play';
     btn.disabled = false;
-    showStoreNotification('❌ Download error. Check server logs.', 'error');
+    showStoreNotification('❌ Download error', 'error');
     setTimeout(hideStoreNotification, 4000);
   }
 });
@@ -1302,8 +1477,79 @@ async function checkAuth() {
   } catch(e) {}
 }
 
+// ── Theme Toggle ──
+function setTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('retroplay_theme', theme);
+  document.getElementById('themeToggle').textContent = theme === 'light' ? '☀️' : '🌙';
+}
+document.getElementById('themeToggle').addEventListener('click', function() {
+  const current = document.documentElement.getAttribute('data-theme') || 'dark';
+  setTheme(current === 'dark' ? 'light' : 'dark');
+});
+
+// ── Google Sign-In ──
+let googleClientId = null;
+async function initGoogleSignIn() {
+  try {
+    const res = await fetch('/api/auth/config');
+    const cfg = await res.json();
+    if (cfg.googleClientId) {
+      googleClientId = cfg.googleClientId;
+      document.getElementById('googleSignInWrapper').style.display = '';
+      // Load Google Identity Services library
+      const script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.onload = function() {
+        google.accounts.id.initialize({
+          client_id: googleClientId,
+          callback: handleGoogleCredential,
+        });
+      };
+      document.head.appendChild(script);
+    }
+  } catch(e) {}
+}
+
+document.getElementById('googleSignInBtn').addEventListener('click', function() {
+  if (typeof google !== 'undefined' && google.accounts) {
+    google.accounts.id.prompt();
+  }
+});
+
+async function handleGoogleCredential(response) {
+  const errEl = document.getElementById('authError');
+  errEl.style.display = 'none';
+  try {
+    const res = await fetch('/api/auth/google', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ credential: response.credential }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      authToken = data.token;
+      currentUser = data.user;
+      localStorage.setItem('retroplay_token', authToken);
+      updateAuthUI();
+      closeAuthModal();
+      showStoreNotification('✅ Welcome, ' + escHtml(currentUser.name) + '!', 'success');
+      setTimeout(hideStoreNotification, 2000);
+    } else {
+      errEl.textContent = data.error || 'Google sign-in failed';
+      errEl.style.display = '';
+    }
+  } catch(e) {
+    errEl.textContent = 'Connection error';
+    errEl.style.display = '';
+  }
+}
+
 // ── Init ──
+const savedTheme = localStorage.getItem('retroplay_theme') || 'dark';
+setTheme(savedTheme);
 checkAuth();
+initGoogleSignIn();
 loadSystems();
 </script>
 </body>

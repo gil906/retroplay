@@ -1026,20 +1026,14 @@ document.getElementById('storeGrid').addEventListener('click', async function(e)
       btn.classList.add('done');
       // Refresh the library in the background
       loadSystems();
-      // After a moment, change to "Play" button
-      setTimeout(() => {
-        if (data.file) {
-          const core = (SYSTEMS[system] || {}).core || system;
-          btn.textContent = '▶ Play Now';
-          btn.classList.remove('done');
-          btn.style.background = '#e94560';
-          btn.disabled = false;
-          btn.onclick = function(ev) {
-            ev.stopPropagation();
-            window.location.href = `/player.html?system=${system}&core=${core}&rom=${encodeURIComponent(data.file)}`;
-          };
-        }
-      }, 1500);
+      // Auto-launch the game after a brief pause
+      if (data.file) {
+        const sysInfo = allSystems.find(s => s.id === system);
+        const core = sysInfo ? sysInfo.core : system;
+        setTimeout(() => {
+          window.location.href = `/player.html?system=${system}&core=${core}&rom=${encodeURIComponent(data.file)}`;
+        }, 1000);
+      }
     } else {
       btn.textContent = '❌ ' + (data.error || 'Failed');
       setTimeout(() => { btn.textContent = '⬇ Download & Play'; btn.disabled = false; }, 3000);

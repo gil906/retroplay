@@ -1005,14 +1005,40 @@ async function browseStore() {
 }
 
 // Store download handler (event delegation)
+// Download notification overlay
+function showStoreNotification(msg, type) {
+  let el = document.getElementById('storeNotification');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'storeNotification';
+    el.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;display:flex;align-items:center;justify-content:center;gap:0.7rem;padding:1rem 1.5rem;font-family:inherit;font-size:0.95rem;font-weight:600;transition:transform 0.3s,opacity 0.3s;transform:translateY(-100%);opacity:0;';
+    document.body.appendChild(el);
+  }
+  const colors = { info: '#6c5ce7', success: '#00b894', error: '#e94560' };
+  el.style.background = colors[type] || colors.info;
+  el.style.color = '#fff';
+  el.innerHTML = msg;
+  // Trigger show
+  requestAnimationFrame(() => { el.style.transform = 'translateY(0)'; el.style.opacity = '1'; });
+}
+function hideStoreNotification() {
+  const el = document.getElementById('storeNotification');
+  if (el) { el.style.transform = 'translateY(-100%)'; el.style.opacity = '0'; }
+}
+
 document.getElementById('storeGrid').addEventListener('click', async function(e) {
-  const btn = e.target.closest('.store-dl-btn');
+  // Allow clicking anywhere on the card, not just the button
+  const card = e.target.closest('.store-card');
+  if (!card) return;
+  const btn = card.querySelector('.store-dl-btn');
   if (!btn || btn.disabled) return;
 
   const slug = btn.dataset.slug;
   const system = btn.dataset.system;
+  const gameName = card.querySelector('.store-card-name')?.textContent || slug;
   btn.disabled = true;
   btn.textContent = '⏳ Downloading...';
+  showStoreNotification('<div class="loader-spinner" style="width:20px;height:20px;border-width:2px;flex-shrink:0;"></div> Downloading ' + escHtml(gameName) + '...', 'info');
 
   try {
     const res = await fetch('/api/store/download', {
@@ -1024,23 +1050,30 @@ document.getElementById('storeGrid').addEventListener('click', async function(e)
     if (data.ok) {
       btn.textContent = data.alreadyExists ? '✅ Already in Library' : '✅ Downloaded!';
       btn.classList.add('done');
-      // Refresh the library in the background
       loadSystems();
-      // Auto-launch the game after a brief pause
       if (data.file) {
+        showStoreNotification('✅ ' + escHtml(gameName) + ' ready! Launching...', 'success');
         const sysInfo = allSystems.find(s => s.id === system);
         const core = sysInfo ? sysInfo.core : system;
         setTimeout(() => {
+          hideStoreNotification();
           window.location.href = `/player.html?system=${system}&core=${core}&rom=${encodeURIComponent(data.file)}`;
-        }, 1000);
+        }, 1200);
+      } else {
+        showStoreNotification('✅ Downloaded ' + escHtml(gameName), 'success');
+        setTimeout(hideStoreNotification, 3000);
       }
     } else {
-      btn.textContent = '❌ ' + (data.error || 'Failed');
-      setTimeout(() => { btn.textContent = '⬇ Download & Play'; btn.disabled = false; }, 3000);
+      btn.textContent = '⬇ Download & Play';
+      btn.disabled = false;
+      showStoreNotification('❌ ' + (data.error || 'Download failed'), 'error');
+      setTimeout(hideStoreNotification, 4000);
     }
   } catch (e) {
-    btn.textContent = '❌ Error';
-    setTimeout(() => { btn.textContent = '⬇ Download & Play'; btn.disabled = false; }, 3000);
+    btn.textContent = '⬇ Download & Play';
+    btn.disabled = false;
+    showStoreNotification('❌ Download error. Check server logs.', 'error');
+    setTimeout(hideStoreNotification, 4000);
   }
 });
 

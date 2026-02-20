@@ -1,0 +1,10 @@
+{
+  "name": "emulatorjs-server",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "cheerio": "^1.0.0",
+    "express": "^4.21.0",
+    "multer": "^1.4.5-lts.1"
+  }
+}

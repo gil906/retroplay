@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RetroPlay</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { background: #000; height: 100%; width: 100%; overflow: hidden; }
+  #back-btn {
+    position: fixed; top: 12px; left: 12px; z-index: 10000;
+    background: rgba(20,20,40,0.85); color: #fff; border: 1px solid rgba(255,255,255,0.1);
+    padding: 8px 18px; border-radius: 20px; cursor: pointer; font-size: 13px;
+    text-decoration: none; backdrop-filter: blur(8px);
+    opacity: 0; transition: opacity 0.3s;
+    display: flex; align-items: center; gap: 6px;
+  }
+  #back-btn.visible { opacity: 1; }
+  #back-btn:hover { background: rgba(233,69,96,0.9); border-color: transparent; }
+  #game { width: 100vw; height: 100vh; }
+  #loading-overlay {
+    position: fixed; inset: 0; z-index: 9999;
+    background: #0a0a1a; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 1rem;
+    transition: opacity 0.5s;
+  }
+  #loading-overlay.hidden { opacity: 0; pointer-events: none; }
+  .loader-spinner {
+    width: 48px; height: 48px; border: 3px solid #1a1a3e;
+    border-top-color: #e94560; border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loader-text { color: #888; font-family: system-ui, sans-serif; font-size: 0.9rem; }
+  .loader-game { color: #e94560; font-family: system-ui, sans-serif; font-size: 1.1rem; font-weight: 600; }
+  #error-screen {
+    position: fixed; inset: 0; z-index: 10000;
+    background: #0a0a1a; display: none; flex-direction: column;
+    align-items: center; justify-content: center; gap: 1rem;
+    font-family: system-ui, sans-serif;
+  }
+  #error-screen.show { display: flex; }
+  #error-screen h2 { color: #e94560; font-size: 1.5rem; }
+  #error-screen p { color: #888; max-width: 400px; text-align: center; }
+  #error-screen a { color: #e94560; }
+</style>
+</head>
+<body>
+<a id="back-btn" href="/">🏠 Library</a>
+
+<div id="loading-overlay">
+  <div class="loader-spinner"></div>
+  <div class="loader-game" id="loading-name">Loading...</div>
+  <div class="loader-text">Preparing emulator...</div>
+</div>
+
+<div id="error-screen">
+  <h2>⚠️ Failed to Load Game</h2>
+  <p id="error-msg">The ROM file could not be found or loaded.</p>
+  <a href="/">← Back to Library</a>
+</div>
+
+<div id="game"></div>
+
+<script>
+  const params = new URLSearchParams(window.location.search);
+  const system = params.get('system');
+  const core = params.get('core');
+  const romFile = params.get('rom');
+
+  if (!system || !core || !romFile) {
+    document.getElementById('loading-overlay').classList.add('hidden');
+    document.getElementById('error-screen').classList.add('show');
+    document.getElementById('error-msg').textContent = 'Missing game parameters.';
+  } else {
+    const gameName = romFile.replace(/\.[^.]+$/, '').replace(/\s*[\(\[][^\)\]]*[\)\]]\s*/g, '').trim();
+    document.title = 'RetroPlay — ' + gameName;
+    document.getElementById('loading-name').textContent = gameName;
+
+    // Verify the ROM exists before loading EmulatorJS
+    const romUrl = '/roms/' + system + '/' + encodeURIComponent(romFile);
+    fetch(romUrl, { method: 'HEAD' }).then(res => {
+      if (!res.ok) {
+        document.getElementById('loading-overlay').classList.add('hidden');
+        document.getElementById('error-screen').classList.add('show');
+        document.getElementById('error-msg').textContent = 'ROM file not found: ' + romFile;
+        return;
+      }
+
+      // EmulatorJS configuration
+      window.EJS_player = '#game';
+      window.EJS_gameUrl = romUrl;
+      window.EJS_core = core;
+      window.EJS_pathtodata = 'https://cdn.emulatorjs.org/latest/data/';
+      window.EJS_gameName = gameName;
+      window.EJS_color = '#e94560';
+      window.EJS_startOnLoaded = true;
+      window.EJS_fullscreenOnLoaded = false;
+
+      // Hide loading overlay once EmulatorJS takes over
+      window.EJS_onGameStart = function() {
+        document.getElementById('loading-overlay').classList.add('hidden');
+      };
+
+      // Load EmulatorJS
+      const script = document.createElement('script');
+      script.src = 'https://cdn.emulatorjs.org/latest/data/loader.js';
+      script.onerror = function() {
+        document.getElementById('loading-overlay').classList.add('hidden');
+        document.getElementById('error-screen').classList.add('show');
+        document.getElementById('error-msg').textContent = 'Failed to load EmulatorJS from CDN.';
+      };
+      document.body.appendChild(script);
+
+      // Fallback: hide loading after 10s even if onGameStart doesn't fire
+      setTimeout(function() {
+        document.getElementById('loading-overlay').classList.add('hidden');
+      }, 10000);
+    }).catch(function() {
+      document.getElementById('loading-overlay').classList.add('hidden');
+      document.getElementById('error-screen').classList.add('show');
+      document.getElementById('error-msg').textContent = 'Network error checking ROM file.';
+    });
+  }
+
+  // Back button: show on mouse move, hide after 2s idle
+  let hideTimer;
+  const backBtn = document.getElementById('back-btn');
+  document.addEventListener('mousemove', function() {
+    backBtn.classList.add('visible');
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(function() { backBtn.classList.remove('visible'); }, 2000);
+  });
+</script>
+</body>
+</html>

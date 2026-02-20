@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RetroPlay - Game Library</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: #0a0a14;
+    color: #f0f0f0;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Navbar ── */
+  .navbar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 1.5rem; height: 60px;
+    background: rgba(10,10,20,0.95);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .nav-logo {
+    font-size: 1.4rem; font-weight: 800; white-space: nowrap;
+    background: linear-gradient(135deg, #e94560, #ff6b6b);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .nav-search {
+    flex: 0 1 420px; position: relative;
+  }
+  .nav-search input {
+    width: 100%; padding: 0.55rem 1rem 0.55rem 2.4rem;
+    background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 24px; color: #f0f0f0; font-size: 0.9rem;
+    font-family: inherit; outline: none; transition: border-color 0.2s, background 0.2s;
+  }
+  .nav-search input:focus { border-color: #e94560; background: rgba(255,255,255,0.1); }
+  .nav-search input::placeholder { color: #666; }
+  .nav-search-icon {
+    position: absolute; left: 0.8rem; top: 50%; transform: translateY(-50%);
+    color: #666; font-size: 0.9rem; pointer-events: none;
+  }
+  .nav-upload-btn {
+    display: flex; align-items: center; gap: 0.4rem;
+    background: #e94560; color: #fff; border: none; padding: 0.5rem 1.1rem;
+    border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer;
+    font-family: inherit; transition: background 0.2s, transform 0.15s; white-space: nowrap;
+  }
+  .nav-upload-btn:hover { background: #d6364f; transform: translateY(-1px); }
+
+  /* ── Hero Section ── */
+  .hero {
+    margin-top: 60px; padding: 2.5rem 1.5rem 2rem;
+    background: linear-gradient(180deg, rgba(233,69,96,0.10) 0%, transparent 100%);
+  }
+  .hero-inner {
+    max-width: 1400px; margin: 0 auto;
+    display: flex; align-items: center; gap: 2rem;
+  }
+  .hero-cover {
+    width: 180px; height: 240px; border-radius: 14px; overflow: hidden;
+    flex-shrink: 0; position: relative;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  }
+  .hero-cover img { width: 100%; height: 100%; object-fit: cover; }
+  .hero-cover-placeholder {
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 4rem; opacity: 0.5;
+  }
+  .hero-info { flex: 1; min-width: 0; }
+  .hero-info .hero-badge {
+    display: inline-block; padding: 0.25rem 0.7rem; border-radius: 6px;
+    font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+    margin-bottom: 0.6rem;
+  }
+  .hero-info h2 {
+    font-size: 2rem; font-weight: 800; line-height: 1.15;
+    margin-bottom: 0.5rem; color: #fff;
+  }
+  .hero-info p { color: #888; font-size: 0.9rem; margin-bottom: 1.2rem; }
+  .hero-play-btn {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    background: #e94560; color: #fff; text-decoration: none;
+    padding: 0.7rem 1.8rem; border-radius: 10px;
+    font-weight: 700; font-size: 1rem; transition: background 0.2s, transform 0.15s;
+  }
+  .hero-play-btn:hover { background: #d6364f; transform: translateY(-2px); }
+
+  /* ── Filter Bar ── */
+  .filter-bar {
+    position: sticky; top: 60px; z-index: 900;
+    background: rgba(10,10,20,0.92); backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    padding: 0.7rem 1.5rem;
+  }
+  .filter-scroll {
+    max-width: 1400px; margin: 0 auto;
+    display: flex; gap: 0.5rem; overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .filter-scroll::-webkit-scrollbar { display: none; }
+  .filter-pill {
+    display: flex; align-items: center; gap: 0.35rem;
+    padding: 0.4rem 0.9rem; border-radius: 20px;
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08);
+    color: #aaa; font-size: 0.8rem; font-weight: 500; cursor: pointer;
+    white-space: nowrap; transition: all 0.2s ease; font-family: inherit;
+    user-select: none;
+  }
+  .filter-pill:hover { background: rgba(255,255,255,0.1); color: #f0f0f0; }
+  .filter-pill.active { color: #fff; border-color: transparent; }
+  .filter-pill .pill-count {
+    background: rgba(255,255,255,0.15); padding: 0.1rem 0.45rem;
+    border-radius: 10px; font-size: 0.7rem; font-weight: 600;
+  }
+
+  /* ── Main Content ── */
+  .main-content {
+    max-width: 1400px; margin: 0 auto; padding: 1.5rem;
+  }
+  .section-title {
+    font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem; color: #f0f0f0;
+  }
+  .game-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 1rem;
+  }
+  @media (max-width: 1200px) { .game-grid { grid-template-columns: repeat(4, 1fr); } }
+  @media (max-width: 768px) {
+    .game-grid { grid-template-columns: repeat(3, 1fr); }
+    .hero-cover { width: 120px; height: 160px; }
+    .hero-info h2 { font-size: 1.4rem; }
+    .nav-search { flex: 0 1 200px; }
+  }
+  @media (max-width: 520px) {
+    .game-grid { grid-template-columns: repeat(2, 1fr); }
+    .hero { padding: 1.5rem 1rem; }
+    .hero-cover { width: 100px; height: 133px; }
+    .hero-info h2 { font-size: 1.1rem; }
+    .navbar { padding: 0 0.8rem; }
+    .nav-upload-btn span.btn-text { display: none; }
+  }
+
+  /* ── Game Card ── */
+  .game-card {
+    position: relative; border-radius: 12px; overflow: hidden;
+    background: #12121f; border: 1px solid #1e1e35;
+    aspect-ratio: 3 / 4; transition: transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
+  }
+  .game-card:hover {
+    transform: scale(1.05); z-index: 10;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+  }
+  .game-card-link {
+    display: block; width: 100%; height: 100%;
+    text-decoration: none; color: inherit;
+    position: relative;
+  }
+  .game-card-bg {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .game-card-bg .card-icon {
+    font-size: 3.5rem; opacity: 0.4;
+  }
+  .game-card-cover {
+    position: absolute; inset: 0;
+  }
+  .game-card-cover img {
+    width: 100%; height: 100%; object-fit: cover;
+  }
+  .game-card-info {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    padding: 2.5rem 0.7rem 0.7rem;
+    background: linear-gradient(transparent, rgba(0,0,0,0.85));
+    display: flex; flex-direction: column; gap: 0.3rem;
+  }
+  .game-card-title {
+    font-size: 0.82rem; font-weight: 600; color: #fff;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .game-card-system {
+    display: inline-flex; align-items: center; gap: 0.25rem;
+    padding: 0.15rem 0.5rem; border-radius: 6px;
+    font-size: 0.65rem; font-weight: 600; color: #fff;
+    width: fit-content;
+  }
+
+  /* Play overlay on hover */
+  .game-card-play {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.35); opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  .game-card:hover .game-card-play { opacity: 1; }
+  .play-circle {
+    width: 52px; height: 52px; border-radius: 50%;
+    background: rgba(233,69,96,0.9); display: flex;
+    align-items: center; justify-content: center;
+    font-size: 1.3rem; color: #fff;
+    box-shadow: 0 4px 20px rgba(233,69,96,0.4);
+    transition: transform 0.2s ease;
+  }
+  .game-card:hover .play-circle { transform: scale(1.1); }
+
+  /* Kebab menu button */
+  .game-card-menu {
+    position: absolute; top: 0.5rem; right: 0.5rem; z-index: 15;
+    width: 28px; height: 28px; border-radius: 50%;
+    background: rgba(0,0,0,0.6); border: none; color: #fff;
+    font-size: 1rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; transition: opacity 0.2s ease;
+    backdrop-filter: blur(4px);
+  }
+  .game-card:hover .game-card-menu { opacity: 1; }
+
+  /* Context dropdown */
+  .ctx-menu {
+    position: absolute; z-index: 2000;
+    background: #1a1a2e; border: 1px solid #2a2a4a;
+    border-radius: 10px; overflow: hidden; min-width: 170px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+    animation: ctxFade 0.15s ease;
+  }
+  @keyframes ctxFade { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+  .ctx-menu button {
+    display: flex; align-items: center; gap: 0.6rem; width: 100%;
+    padding: 0.65rem 1rem; background: none; border: none;
+    color: #ccc; font-size: 0.82rem; cursor: pointer;
+    font-family: inherit; transition: background 0.15s;
+  }
+  .ctx-menu button:hover { background: rgba(255,255,255,0.07); color: #fff; }
+  .ctx-menu button.danger:hover { background: rgba(233,69,96,0.15); color: #e94560; }
+  .ctx-menu hr { border: none; border-top: 1px solid #2a2a4a; }
+
+  /* ── Upload Modal ── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; z-index: 5000;
+    background: rgba(0,0,0,0.7); backdrop-filter: blur(6px);
+    align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: #12121f; border: 1px solid #1e1e35; border-radius: 16px;
+    width: 90%; max-width: 520px; padding: 2rem;
+    position: relative; animation: modalIn 0.2s ease;
+  }
+  @keyframes modalIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  .modal-close {
+    position: absolute; top: 1rem; right: 1rem;
+    background: rgba(255,255,255,0.08); border: none; color: #888;
+    width: 32px; height: 32px; border-radius: 50%;
+    font-size: 1.1rem; cursor: pointer; display: flex;
+    align-items: center; justify-content: center;
+    transition: background 0.2s, color 0.2s;
+  }
+  .modal-close:hover { background: rgba(255,255,255,0.15); color: #fff; }
+  .modal h2 { font-size: 1.3rem; font-weight: 700; margin-bottom: 1.2rem; }
+  .modal label { display: block; color: #aaa; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.04em; }
+  .modal select {
+    width: 100%; padding: 0.6rem 0.8rem; background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;
+    color: #f0f0f0; font-size: 0.9rem; font-family: inherit;
+    margin-bottom: 1.2rem; outline: none;
+  }
+  .modal select:focus { border-color: #e94560; }
+  .drop-zone {
+    border: 2px dashed rgba(255,255,255,0.15); border-radius: 12px;
+    padding: 2.5rem 1rem; text-align: center; cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    margin-bottom: 1rem;
+  }
+  .drop-zone:hover, .drop-zone.drag-over {
+    border-color: #e94560; background: rgba(233,69,96,0.06);
+  }
+  .drop-zone-icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+  .drop-zone p { color: #888; font-size: 0.85rem; }
+  .drop-zone .browse-link { color: #e94560; cursor: pointer; font-weight: 600; }
+  .upload-file-list {
+    max-height: 120px; overflow-y: auto; margin-bottom: 1rem;
+  }
+  .upload-file-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.35rem 0; font-size: 0.82rem; color: #ccc;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .upload-file-remove {
+    background: none; border: none; color: #666; cursor: pointer;
+    font-size: 0.9rem; padding: 2px 6px; border-radius: 4px;
+    transition: color 0.15s;
+  }
+  .upload-file-remove:hover { color: #e94560; }
+  .modal-submit {
+    width: 100%; padding: 0.7rem; background: #e94560; color: #fff;
+    border: none; border-radius: 10px; font-size: 0.95rem; font-weight: 700;
+    cursor: pointer; font-family: inherit; transition: background 0.2s;
+  }
+  .modal-submit:hover { background: #d6364f; }
+  .modal-submit:disabled { background: #444; cursor: not-allowed; }
+  .modal-progress {
+    margin-top: 0.8rem; text-align: center; font-size: 0.85rem; color: #e94560;
+  }
+  .modal-progress .progress-bar {
+    height: 4px; border-radius: 4px; background: rgba(255,255,255,0.08);
+    margin-top: 0.5rem; overflow: hidden;
+  }
+  .modal-progress .progress-fill {
+    height: 100%; background: #e94560; border-radius: 4px;
+    transition: width 0.3s ease;
+  }
+
+  /* ── Empty State ── */
+  .empty-state {
+    text-align: center; padding: 6rem 2rem;
+  }
+  .empty-state .empty-icon { font-size: 4rem; margin-bottom: 1rem; opacity: 0.6; }
+  .empty-state h2 { font-size: 1.6rem; font-weight: 700; margin-bottom: 0.5rem; }
+  .empty-state p { color: #888; margin-bottom: 2rem; font-size: 1rem; }
+  .empty-upload-btn {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    background: #e94560; color: #fff; border: none;
+    padding: 0.8rem 2rem; border-radius: 12px;
+    font-size: 1.05rem; font-weight: 700; cursor: pointer;
+    font-family: inherit; transition: background 0.2s, transform 0.15s;
+  }
+  .empty-upload-btn:hover { background: #d6364f; transform: translateY(-2px); }
+
+  /* ── Loading skeleton ── */
+  .skeleton-grid {
+    display: grid; grid-template-columns: repeat(6, 1fr); gap: 1rem;
+  }
+  @media (max-width: 1200px) { .skeleton-grid { grid-template-columns: repeat(4, 1fr); } }
+  @media (max-width: 768px) { .skeleton-grid { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 520px) { .skeleton-grid { grid-template-columns: repeat(2, 1fr); } }
+  .skeleton-card {
+    aspect-ratio: 3/4; border-radius: 12px;
+    background: linear-gradient(110deg, #12121f 30%, #1a1a2e 50%, #12121f 70%);
+    background-size: 200% 100%;
+    animation: skeletonPulse 1.5s ease-in-out infinite;
+  }
+  @keyframes skeletonPulse {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* ── No Results ── */
+  .no-results {
+    text-align: center; padding: 4rem 2rem; color: #666;
+  }
+  .no-results .nr-icon { font-size: 3rem; margin-bottom: 0.8rem; opacity: 0.5; }
+  .no-results p { font-size: 1rem; }
+
+  /* ── System Row headers ── */
+  .system-section { margin-bottom: 2rem; }
+  .system-section-header {
+    display: flex; align-items: center; gap: 0.5rem;
+    margin-bottom: 0.8rem;
+  }
+  .system-section-header .sys-icon { font-size: 1.3rem; }
+  .system-section-header h3 { font-size: 1.15rem; font-weight: 700; }
+  .system-section-header .sys-count { color: #666; font-size: 0.85rem; margin-left: 0.3rem; }
+  /* ── Store Modal extras ── */
+  #storeGrid::-webkit-scrollbar { width: 6px; }
+  #storeGrid::-webkit-scrollbar-track { background: transparent; }
+  #storeGrid::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+  .store-card {
+    border-radius: 10px; overflow: hidden; background: #1a1a2e;
+    border: 1px solid #2a2a4a; cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .store-card:hover { transform: scale(1.03); box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
+  .store-card-img {
+    width: 100%; aspect-ratio: 1/1; object-fit: cover;
+    background: linear-gradient(135deg, #1a1a2e, #2a2a4a);
+  }
+  .store-card-info { padding: 0.5rem 0.6rem; }
+  .store-card-name {
+    font-size: 0.75rem; font-weight: 600; color: #f0f0f0;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    margin-bottom: 0.3rem;
+  }
+  .store-dl-btn {
+    width: 100%; padding: 0.35rem; border: none; border-radius: 6px;
+    font-size: 0.72rem; font-weight: 600; cursor: pointer;
+    font-family: inherit; transition: background 0.2s;
+    background: #6c5ce7; color: #fff;
+  }
+  .store-dl-btn:hover { background: #5a4bd1; }
+  .store-dl-btn:disabled { background: #444; cursor: not-allowed; }
+  .store-dl-btn.done { background: #00b894; }
+  @media (max-width: 768px) {
+    #storeGrid { grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (max-width: 520px) {
+    #storeGrid { grid-template-columns: repeat(2, 1fr); }
+    #storeModal .modal { padding: 1.2rem; }
+  }
+
+</style>
+</head>
+<body>
+
+<!-- ── Navbar ── -->
+<nav class="navbar">
+  <div class="nav-logo">🎮 RetroPlay</div>
+  <div class="nav-search">
+    <span class="nav-search-icon">🔍</span>
+    <input type="text" id="searchInput" placeholder="Search games..." autocomplete="off">
+  </div>
+  <button class="nav-upload-btn" id="navStoreBtn" style="background:#6c5ce7;margin-right:0.5rem;">🏪 <span class="btn-text">ROM Store</span></button>
+  <button class="nav-upload-btn" id="navUploadBtn">📤 <span class="btn-text">Upload</span></button>
+</nav>
+
+<!-- ── Hero (injected by JS) ── -->
+<div id="heroSection"></div>
+
+<!-- ── Filter Bar ── -->
+<div class="filter-bar" id="filterBar" style="display:none;">
+  <div class="filter-scroll" id="filterScroll"></div>
+</div>
+
+<!-- ── Main Content ── -->
+<div class="main-content" id="mainContent" style="margin-top:60px;">
+  <!-- Loading skeleton -->
+  <div id="loadingSkeleton">
+    <div class="skeleton-grid">
+      <div class="skeleton-card"></div><div class="skeleton-card"></div>
+      <div class="skeleton-card"></div><div class="skeleton-card"></div>
+      <div class="skeleton-card"></div><div class="skeleton-card"></div>
+      <div class="skeleton-card"></div><div class="skeleton-card"></div>
+      <div class="skeleton-card"></div><div class="skeleton-card"></div>
+      <div class="skeleton-card"></div><div class="skeleton-card"></div>
+    </div>
+  </div>
+  <div id="gameContent"></div>
+</div>
+
+<!-- ── Upload Modal ── -->
+<div class="modal-overlay" id="uploadModal">
+  <div class="modal">
+    <button class="modal-close" id="modalClose">✕</button>
+    <h2>📤 Upload ROMs</h2>
+    <label for="uploadSystem">System</label>
+    <select id="uploadSystem"></select>
+    <label>ROM Files</label>
+    <div class="drop-zone" id="dropZone">
+      <div class="drop-zone-icon">📁</div>
+      <p>Drag &amp; drop ROM files here<br>or <span class="browse-link" id="browseLink">browse files</span></p>
+    </div>
+    <input type="file" id="uploadFileInput" multiple hidden>
+    <div class="upload-file-list" id="uploadFileList"></div>
+    <button class="modal-submit" id="uploadSubmit" disabled>Upload</button>
+    <div class="modal-progress" id="uploadProgress" style="display:none;">
+      <span id="uploadProgressText"></span>
+      <div class="progress-bar"><div class="progress-fill" id="uploadProgressFill" style="width:0%"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Context Menu ── -->
+<div class="ctx-menu" id="ctxMenu" style="display:none;"></div>
+
+<!-- ── Store Modal ── -->
+<div class="modal-overlay" id="storeModal">
+  <div class="modal" style="max-width:900px;max-height:90vh;display:flex;flex-direction:column;">
+    <button class="modal-close" id="storeModalClose">✕</button>
+    <h2>🏪 ROM Store</h2>
+    <p style="color:#888;font-size:0.82rem;margin-bottom:1rem;">Browse and download ROMs from romsgames.net</p>
+
+    <div style="display:flex;gap:0.6rem;margin-bottom:1rem;flex-wrap:wrap;">
+      <select id="storeSystem" style="flex:0 0 180px;padding:0.5rem 0.7rem;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#f0f0f0;font-size:0.85rem;font-family:inherit;outline:none;">
+      </select>
+      <button id="storePrev" style="padding:0.4rem 0.8rem;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#aaa;cursor:pointer;font-family:inherit;">← Prev</button>
+      <span id="storePageInfo" style="padding:0.5rem 0.5rem;color:#888;font-size:0.82rem;align-self:center;"></span>
+      <button id="storeNext" style="padding:0.4rem 0.8rem;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#aaa;cursor:pointer;font-family:inherit;">Next →</button>
+    </div>
+
+    <div id="storeLoading" style="text-align:center;padding:2rem;color:#888;display:none;">
+      <div class="loader-spinner" style="margin:0 auto 1rem;width:36px;height:36px;border:3px solid #1a1a3e;border-top-color:#6c5ce7;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+      Loading...
+    </div>
+
+    <div id="storeGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.8rem;overflow-y:auto;flex:1;padding-right:0.3rem;"></div>
+
+    <div id="storeEmpty" style="text-align:center;padding:3rem;color:#666;display:none;">
+      <div style="font-size:2.5rem;margin-bottom:0.5rem;">🏪</div>
+      <p>Select a system to browse ROMs</p>
+    </div>
+
+    <div id="storeStatus" style="margin-top:0.8rem;text-align:center;font-size:0.82rem;color:#6c5ce7;display:none;"></div>
+  </div>
+</div>
+
+<!-- ── Hidden cover upload ── -->
+<input type="file" id="coverFileInput" accept="image/*" hidden>
+
+<script>
+const SYSTEM_META = {
+  nes:       { name: 'NES',           icon: '🎴', color: '#e60012', gradient: ['#e60012','#8b0000'] },
+  snes:      { name: 'SNES',          icon: '🏰', color: '#7b2fbe', gradient: ['#7b2fbe','#2e1065'] },
+  n64:       { name: 'N64',           icon: '🎯', color: '#009e42', gradient: ['#009e42','#006400'] },
+  gb:        { name: 'Game Boy',      icon: '📱', color: '#8bac0f', gradient: ['#8bac0f','#306230'] },
+  gba:       { name: 'GBA',           icon: '📲', color: '#4f46e5', gradient: ['#4f46e5','#1e1b4b'] },
+  nds:       { name: 'DS',            icon: '📟', color: '#64748b', gradient: ['#64748b','#1e293b'] },
+  psp:       { name: 'PSP',           icon: '🎮', color: '#1d4ed8', gradient: ['#1d4ed8','#1e3a5f'] },
+  segaMD:    { name: 'Genesis',       icon: '🌀', color: '#2563eb', gradient: ['#2563eb','#172554'] },
+  segaMS:    { name: 'Master System', icon: '⚡', color: '#dc2626', gradient: ['#dc2626','#7f1d1d'] },
+  atari2600: { name: 'Atari 2600',    icon: '👾', color: '#ea580c', gradient: ['#ea580c','#7c2d12'] },
+  arcade:    { name: 'Arcade',        icon: '🕹️', color: '#eab308', gradient: ['#eab308','#a16207'] },
+};
+
+let allSystems = [];
+let activeFilter = 'all';
+let searchDebounce = null;
+let pendingUploadFiles = [];
+let ctxTarget = null; // { system, rom, core }
+
+// ── Fetch & Render ──
+async function loadSystems() {
+  try {
+    const res = await fetch('/api/systems');
+    allSystems = await res.json();
+    document.getElementById('loadingSkeleton').style.display = 'none';
+    populateUploadSystemSelect();
+    render();
+  } catch (e) {
+    document.getElementById('loadingSkeleton').innerHTML =
+      '<p style="color:#e94560;text-align:center;padding:3rem;">Failed to load game library. Is the server running?</p>';
+  }
+}
+
+function getAllRoms() {
+  const roms = [];
+  for (const sys of allSystems) {
+    for (const rom of sys.roms) {
+      roms.push({ ...rom, system: sys.id, systemName: sys.name, core: sys.core });
+    }
+  }
+  return roms;
+}
+
+function render() {
+  const totalRoms = allSystems.reduce((s, sys) => s + sys.romCount, 0);
+  renderHero(totalRoms);
+  renderFilters(totalRoms);
+  renderGames();
+}
+
+function renderHero(totalRoms) {
+  const hero = document.getElementById('heroSection');
+  if (totalRoms === 0) { hero.innerHTML = ''; return; }
+  // Pick the first ROM with a cover, or just the first ROM
+  const allRoms = getAllRoms();
+  const featured = allRoms.find(r => r.cover) || allRoms[0];
+  if (!featured) { hero.innerHTML = ''; return; }
+  const meta = SYSTEM_META[featured.system] || { icon: '🎮', color: '#e94560', gradient: ['#e94560','#8b0000'] };
+  const coverHtml = featured.cover
+    ? `<img src="/covers/${featured.system}/${featured.cover}" alt="${featured.name}">`
+    : `<div class="hero-cover-placeholder" style="background:linear-gradient(135deg,${meta.gradient[0]},${meta.gradient[1]})">${meta.icon}</div>`;
+  const playerUrl = `/player.html?system=${featured.system}&core=${featured.core}&rom=${encodeURIComponent(featured.file)}`;
+  hero.innerHTML = `
+    <div class="hero">
+      <div class="hero-inner">
+        <div class="hero-cover">${coverHtml}</div>
+        <div class="hero-info">
+          <span class="hero-badge" style="background:${meta.color}">${meta.icon} ${meta.name}</span>
+          <h2>${escHtml(featured.name)}</h2>
+          <p>${totalRoms} game${totalRoms !== 1 ? 's' : ''} across ${allSystems.filter(s=>s.romCount>0).length} system${allSystems.filter(s=>s.romCount>0).length !== 1 ? 's' : ''}</p>
+          <a href="${playerUrl}" class="hero-play-btn">▶ Start Playing</a>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderFilters(totalRoms) {
+  const bar = document.getElementById('filterBar');
+  const scroll = document.getElementById('filterScroll');
+  if (totalRoms === 0) { bar.style.display = 'none'; return; }
+  bar.style.display = '';
+  const systemsWithRoms = allSystems.filter(s => s.romCount > 0);
+  let html = `<div class="filter-pill ${activeFilter === 'all' ? 'active' : ''}" data-filter="all"
+    style="${activeFilter === 'all' ? 'background:#e94560;' : ''}">All <span class="pill-count">${totalRoms}</span></div>`;
+  for (const sys of systemsWithRoms) {
+    const meta = SYSTEM_META[sys.id] || { icon: '🎮', color: '#e94560' };
+    const isActive = activeFilter === sys.id;
+    html += `<div class="filter-pill ${isActive ? 'active' : ''}" data-filter="${sys.id}"
+      style="${isActive ? `background:${meta.color};` : ''}">${meta.icon} ${meta.name} <span class="pill-count">${sys.romCount}</span></div>`;
+  }
+  scroll.innerHTML = html;
+}
+
+function renderGames() {
+  const container = document.getElementById('gameContent');
+  const totalRoms = allSystems.reduce((s, sys) => s + sys.romCount, 0);
+
+  if (totalRoms === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">🎮</div>
+        <h2>No games yet</h2>
+        <p>Upload your first ROM to get started</p>
+        <button class="empty-upload-btn" onclick="openUploadModal()">📤 Upload ROMs</button>
+      </div>`;
+    return;
+  }
+
+  if (activeFilter === 'all') {
+    // Netflix-style: rows per system
+    let html = '';
+    for (const sys of allSystems) {
+      if (sys.romCount === 0) continue;
+      const meta = SYSTEM_META[sys.id] || { icon: '🎮', color: '#e94560' };
+      html += `<div class="system-section">
+        <div class="system-section-header">
+          <span class="sys-icon">${meta.icon}</span>
+          <h3>${meta.name}</h3>
+          <span class="sys-count">${sys.romCount}</span>
+        </div>
+        <div class="game-grid">${sys.roms.map(rom => gameCardHtml(rom, sys)).join('')}</div>
+      </div>`;
+    }
+    container.innerHTML = html;
+  } else {
+    const sys = allSystems.find(s => s.id === activeFilter);
+    if (!sys || sys.romCount === 0) { container.innerHTML = ''; return; }
+    const meta = SYSTEM_META[sys.id] || { icon: '🎮', color: '#e94560' };
+    container.innerHTML = `
+      <div class="system-section">
+        <div class="system-section-header">
+          <span class="sys-icon">${meta.icon}</span>
+          <h3>${meta.name}</h3>
+          <span class="sys-count">${sys.romCount}</span>
+        </div>
+        <div class="game-grid">${sys.roms.map(rom => gameCardHtml(rom, sys)).join('')}</div>
+      </div>`;
+  }
+}
+
+function gameCardHtml(rom, sys) {
+  const meta = SYSTEM_META[sys.id] || { icon: '🎮', color: '#e94560', gradient: ['#e94560','#8b0000'] };
+  const playerUrl = `/player.html?system=${sys.id}&core=${sys.core}&rom=${encodeURIComponent(rom.file)}`;
+  const bgStyle = rom.cover
+    ? '' : `background:linear-gradient(135deg,${meta.gradient[0]},${meta.gradient[1]});`;
+  const coverImg = rom.cover
+    ? `<div class="game-card-cover"><img src="/covers/${sys.id}/${rom.cover}" alt="${escHtml(rom.name)}" loading="lazy"></div>`
+    : `<div class="game-card-bg" style="${bgStyle}"><span class="card-icon">${meta.icon}</span></div>`;
+  return `<div class="game-card" data-system="${sys.id}" data-core="${sys.core}" data-file="${escAttr(rom.file)}" data-name="${escAttr(rom.name)}">
+    <a class="game-card-link" href="${playerUrl}">
+      ${coverImg}
+      <div class="game-card-play"><div class="play-circle">▶</div></div>
+      <div class="game-card-info">
+        <div class="game-card-title">${escHtml(rom.name)}</div>
+        <div class="game-card-system" style="background:${meta.color}">${meta.icon} ${meta.name}</div>
+      </div>
+    </a>
+    <button class="game-card-menu" data-menu="true">⋯</button>
+  </div>`;
+}
+
+function renderSearchResults(results) {
+  const container = document.getElementById('gameContent');
+  if (results.length === 0) {
+    container.innerHTML = `<div class="no-results"><div class="nr-icon">🔍</div><p>No results found</p></div>`;
+    return;
+  }
+  const cards = results.map(r => {
+    const meta = SYSTEM_META[r.system] || { icon: '🎮', color: '#e94560', gradient: ['#e94560','#8b0000'] };
+    const playerUrl = `/player.html?system=${r.system}&core=${r.core}&rom=${encodeURIComponent(r.file)}`;
+    const bgStyle = r.cover
+      ? '' : `background:linear-gradient(135deg,${meta.gradient[0]},${meta.gradient[1]});`;
+    const coverImg = r.cover
+      ? `<div class="game-card-cover"><img src="/covers/${r.system}/${r.cover}" alt="${escHtml(r.name)}" loading="lazy"></div>`
+      : `<div class="game-card-bg" style="${bgStyle}"><span class="card-icon">${meta.icon}</span></div>`;
+    return `<div class="game-card" data-system="${r.system}" data-core="${r.core}" data-file="${escAttr(r.file)}" data-name="${escAttr(r.name)}">
+      <a class="game-card-link" href="${playerUrl}">
+        ${coverImg}
+        <div class="game-card-play"><div class="play-circle">▶</div></div>
+        <div class="game-card-info">
+          <div class="game-card-title">${escHtml(r.name)}</div>
+          <div class="game-card-system" style="background:${meta.color}">${meta.icon} ${r.systemName || meta.name}</div>
+        </div>
+      </a>
+      <button class="game-card-menu" data-menu="true">⋯</button>
+    </div>`;
+  }).join('');
+  container.innerHTML = `<div class="section-title">Search Results (${results.length})</div><div class="game-grid">${cards}</div>`;
+}
+
+// ── Search ──
+document.getElementById('searchInput').addEventListener('input', function() {
+  const q = this.value.trim();
+  clearTimeout(searchDebounce);
+  if (!q) {
+    document.getElementById('heroSection').style.display = '';
+    document.getElementById('filterBar').style.display = '';
+    render();
+    return;
+  }
+  document.getElementById('heroSection').style.display = 'none';
+  document.getElementById('filterBar').style.display = 'none';
+  searchDebounce = setTimeout(async () => {
+    try {
+      const res = await fetch('/api/search?q=' + encodeURIComponent(q));
+      const results = await res.json();
+      renderSearchResults(results);
+    } catch (e) {
+      document.getElementById('gameContent').innerHTML = '<p style="color:#e94560;text-align:center;padding:2rem;">Search failed</p>';
+    }
+  }, 300);
+});
+
+// ── Filter pills (event delegation) ──
+document.getElementById('filterScroll').addEventListener('click', function(e) {
+  const pill = e.target.closest('.filter-pill');
+  if (!pill) return;
+  activeFilter = pill.dataset.filter;
+  render();
+});
+
+// ── Context menu (event delegation) ──
+document.getElementById('mainContent').addEventListener('click', function(e) {
+  const menuBtn = e.target.closest('[data-menu]');
+  if (!menuBtn) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const card = menuBtn.closest('.game-card');
+  if (!card) return;
+  ctxTarget = {
+    system: card.dataset.system,
+    core: card.dataset.core,
+    file: card.dataset.file,
+    name: card.dataset.name,
+  };
+  const rect = menuBtn.getBoundingClientRect();
+  showCtxMenu(rect.right, rect.bottom + 4);
+});
+
+function showCtxMenu(x, y) {
+  const menu = document.getElementById('ctxMenu');
+  menu.innerHTML = `
+    <button onclick="triggerCoverUpload()">🖼️ Upload Cover Art</button>
+    <hr>
+    <button class="danger" onclick="deleteRom()">🗑️ Delete ROM</button>`;
+  menu.style.display = 'block';
+  // Position: keep on screen
+  menu.style.left = Math.min(x, window.innerWidth - 190) + 'px';
+  menu.style.top = Math.min(y, window.innerHeight - 100) + 'px';
+}
+
+function hideCtxMenu() {
+  document.getElementById('ctxMenu').style.display = 'none';
+}
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.ctx-menu') && !e.target.closest('[data-menu]')) hideCtxMenu();
+});
+
+// ── Cover upload ──
+function triggerCoverUpload() {
+  hideCtxMenu();
+  document.getElementById('coverFileInput').click();
+}
+
+document.getElementById('coverFileInput').addEventListener('change', async function() {
+  if (!this.files.length || !ctxTarget) return;
+  const fd = new FormData();
+  fd.append('cover', this.files[0]);
+  try {
+    const res = await fetch(`/api/covers/${ctxTarget.system}/${encodeURIComponent(ctxTarget.name)}`, { method: 'POST', body: fd });
+    if (res.ok) loadSystems();
+  } catch (e) { alert('Cover upload failed'); }
+  this.value = '';
+});
+
+// ── Delete ROM ──
+async function deleteRom() {
+  hideCtxMenu();
+  if (!ctxTarget) return;
+  if (!confirm(`Delete "${ctxTarget.name}"?`)) return;
+  try {
+    const res = await fetch(`/api/roms/${ctxTarget.system}/${encodeURIComponent(ctxTarget.file)}`, { method: 'DELETE' });
+    if (res.ok) loadSystems();
+  } catch (e) { alert('Delete failed'); }
+}
+
+// ── Upload Modal ──
+function openUploadModal() {
+  pendingUploadFiles = [];
+  renderUploadFileList();
+  document.getElementById('uploadProgress').style.display = 'none';
+  document.getElementById('uploadSubmit').disabled = true;
+  document.getElementById('uploadModal').classList.add('open');
+}
+
+function closeUploadModal() {
+  document.getElementById('uploadModal').classList.remove('open');
+}
+
+document.getElementById('navUploadBtn').addEventListener('click', openUploadModal);
+document.getElementById('modalClose').addEventListener('click', closeUploadModal);
+document.getElementById('uploadModal').addEventListener('click', function(e) {
+  if (e.target === this) closeUploadModal();
+});
+
+function populateUploadSystemSelect() {
+  const sel = document.getElementById('uploadSystem');
+  sel.innerHTML = allSystems.map(sys => {
+    const meta = SYSTEM_META[sys.id] || { icon: '🎮' };
+    return `<option value="${sys.id}">${meta.icon} ${sys.name}</option>`;
+  }).join('');
+}
+
+// Drop zone
+const dropZone = document.getElementById('dropZone');
+const browseLink = document.getElementById('browseLink');
+const fileInput = document.getElementById('uploadFileInput');
+
+browseLink.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('click', () => fileInput.click());
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  addUploadFiles(e.dataTransfer.files);
+});
+
+fileInput.addEventListener('change', function() {
+  addUploadFiles(this.files);
+  this.value = '';
+});
+
+function addUploadFiles(files) {
+  for (const f of files) pendingUploadFiles.push(f);
+  renderUploadFileList();
+  document.getElementById('uploadSubmit').disabled = pendingUploadFiles.length === 0;
+}
+
+function renderUploadFileList() {
+  const list = document.getElementById('uploadFileList');
+  list.innerHTML = pendingUploadFiles.map((f, i) =>
+    `<div class="upload-file-item"><span>📄 ${escHtml(f.name)}</span><button class="upload-file-remove" onclick="removeUploadFile(${i})">✕</button></div>`
+  ).join('');
+}
+
+function removeUploadFile(idx) {
+  pendingUploadFiles.splice(idx, 1);
+  renderUploadFileList();
+  document.getElementById('uploadSubmit').disabled = pendingUploadFiles.length === 0;
+}
+
+document.getElementById('uploadSubmit').addEventListener('click', async function() {
+  const systemId = document.getElementById('uploadSystem').value;
+  if (!systemId || pendingUploadFiles.length === 0) return;
+  this.disabled = true;
+  const prog = document.getElementById('uploadProgress');
+  const progText = document.getElementById('uploadProgressText');
+  const progFill = document.getElementById('uploadProgressFill');
+  prog.style.display = '';
+  progText.textContent = `Uploading ${pendingUploadFiles.length} file${pendingUploadFiles.length > 1 ? 's' : ''}...`;
+  progFill.style.width = '30%';
+
+  const fd = new FormData();
+  for (const f of pendingUploadFiles) fd.append('roms', f);
+
+  try {
+    const res = await fetch('/api/roms/' + systemId, { method: 'POST', body: fd });
+    const data = await res.json();
+    progFill.style.width = '100%';
+    if (data.ok) {
+      progText.textContent = `✅ ${data.count} ROM${data.count > 1 ? 's' : ''} uploaded!`;
+      pendingUploadFiles = [];
+      renderUploadFileList();
+      setTimeout(() => { closeUploadModal(); loadSystems(); }, 1200);
+    } else {
+      progText.textContent = '❌ ' + (data.error || 'Upload failed');
+      this.disabled = false;
+    }
+  } catch (e) {
+    progText.textContent = '❌ Upload error';
+    progFill.style.width = '0%';
+    this.disabled = false;
+  }
+});
+
+// ── Helpers ──
+function escHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function escAttr(s) {
+  return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── ROM Store ──
+const STORE_SYSTEM_NAMES = {
+  nes: 'NES', snes: 'SNES', n64: 'N64', gb: 'Game Boy', gba: 'GBA',
+  nds: 'DS', psp: 'PSP', segaMD: 'Genesis', segaMS: 'Master System', atari2600: 'Atari 2600',
+};
+let storePage = 1;
+let storeCurrentSystem = 'snes';
+let storeTotal = 0;
+
+function openStoreModal() {
+  document.getElementById('storeModal').classList.add('open');
+  populateStoreSystemSelect();
+  browseStore();
+}
+
+function closeStoreModal() {
+  document.getElementById('storeModal').classList.remove('open');
+}
+
+document.getElementById('navStoreBtn').addEventListener('click', openStoreModal);
+document.getElementById('storeModalClose').addEventListener('click', closeStoreModal);
+document.getElementById('storeModal').addEventListener('click', function(e) {
+  if (e.target === this) closeStoreModal();
+});
+
+function populateStoreSystemSelect() {
+  const sel = document.getElementById('storeSystem');
+  if (sel.children.length > 0) return;
+  for (const [id, name] of Object.entries(STORE_SYSTEM_NAMES)) {
+    const meta = SYSTEM_META[id] || { icon: '🎮' };
+    const opt = document.createElement('option');
+    opt.value = id;
+    opt.textContent = meta.icon + ' ' + name;
+    if (id === storeCurrentSystem) opt.selected = true;
+    sel.appendChild(opt);
+  }
+}
+
+document.getElementById('storeSystem').addEventListener('change', function() {
+  storeCurrentSystem = this.value;
+  storePage = 1;
+  browseStore();
+});
+
+document.getElementById('storePrev').addEventListener('click', function() {
+  if (storePage > 1) { storePage--; browseStore(); }
+});
+
+document.getElementById('storeNext').addEventListener('click', function() {
+  const maxPage = Math.ceil(storeTotal / 36) || 1;
+  if (storePage < maxPage) { storePage++; browseStore(); }
+});
+
+async function browseStore() {
+  const grid = document.getElementById('storeGrid');
+  const loading = document.getElementById('storeLoading');
+  const empty = document.getElementById('storeEmpty');
+  const pageInfo = document.getElementById('storePageInfo');
+
+  grid.innerHTML = '';
+  empty.style.display = 'none';
+  loading.style.display = '';
+
+  try {
+    const res = await fetch(`/api/store/browse?system=${storeCurrentSystem}&page=${storePage}`);
+    const data = await res.json();
+    loading.style.display = 'none';
+
+    if (!data.roms || data.roms.length === 0) {
+      empty.style.display = '';
+      pageInfo.textContent = '';
+      return;
+    }
+
+    storeTotal = data.total || data.roms.length;
+    const maxPage = Math.ceil(storeTotal / 36) || 1;
+    pageInfo.textContent = `Page ${storePage} of ${maxPage} (${storeTotal} ROMs)`;
+
+    for (const rom of data.roms) {
+      const card = document.createElement('div');
+      card.className = 'store-card';
+      const imgSrc = rom.cover || '';
+      card.innerHTML = `
+        ${imgSrc ? `<img class="store-card-img" src="${escAttr(imgSrc)}" alt="${escAttr(rom.name)}" loading="lazy">` :
+          `<div class="store-card-img" style="display:flex;align-items:center;justify-content:center;font-size:2rem;opacity:0.4;">${(SYSTEM_META[rom.system]||{icon:'🎮'}).icon}</div>`}
+        <div class="store-card-info">
+          <div class="store-card-name" title="${escAttr(rom.name)}">${escHtml(rom.name)}</div>
+          <button class="store-dl-btn" data-slug="${escAttr(rom.slug)}" data-system="${escAttr(rom.system)}">⬇ Download & Play</button>
+        </div>`;
+      grid.appendChild(card);
+    }
+  } catch (e) {
+    loading.style.display = 'none';
+    grid.innerHTML = '<p style="color:#e94560;text-align:center;padding:2rem;grid-column:1/-1;">Failed to load store</p>';
+  }
+}
+
+// Store download handler (event delegation)
+document.getElementById('storeGrid').addEventListener('click', async function(e) {
+  const btn = e.target.closest('.store-dl-btn');
+  if (!btn || btn.disabled) return;
+
+  const slug = btn.dataset.slug;
+  const system = btn.dataset.system;
+  btn.disabled = true;
+  btn.textContent = '⏳ Downloading...';
+
+  try {
+    const res = await fetch('/api/store/download', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug, system }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      btn.textContent = data.alreadyExists ? '✅ Already in Library' : '✅ Downloaded!';
+      btn.classList.add('done');
+      // Refresh the library in the background
+      loadSystems();
+      // After a moment, change to "Play" button
+      setTimeout(() => {
+        if (data.file) {
+          const core = (SYSTEMS[system] || {}).core || system;
+          btn.textContent = '▶ Play Now';
+          btn.classList.remove('done');
+          btn.style.background = '#e94560';
+          btn.disabled = false;
+          btn.onclick = function(ev) {
+            ev.stopPropagation();
+            window.location.href = `/player.html?system=${system}&core=${core}&rom=${encodeURIComponent(data.file)}`;
+          };
+        }
+      }, 1500);
+    } else {
+      btn.textContent = '❌ ' + (data.error || 'Failed');
+      setTimeout(() => { btn.textContent = '⬇ Download & Play'; btn.disabled = false; }, 3000);
+    }
+  } catch (e) {
+    btn.textContent = '❌ Error';
+    setTimeout(() => { btn.textContent = '⬇ Download & Play'; btn.disabled = false; }, 3000);
+  }
+});
+
+// ── Init ──
+loadSystems();
+</script>
+</body>
+</html>

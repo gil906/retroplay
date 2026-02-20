@@ -24,6 +24,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'retroplay-lan-secret-' + (fs.exist
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'gdleonq@gmail.com';
 const ADMIN_SUBNET = process.env.ADMIN_SUBNET || '192.168.68.0/22';
+const TURN_SECRET = process.env.TURN_SECRET || 'RETROPLAY_TURN_SECRET_CHANGE_ME';
 
 // ── User helpers ──
 function loadUsers() {
@@ -314,6 +315,17 @@ app.post('/api/auth/google', async (req, res) => {
 // Expose Google Client ID to frontend
 app.get('/api/auth/config', (req, res) => {
   res.json({ googleClientId: GOOGLE_CLIENT_ID || null });
+});
+
+// Generate temporary TURN credentials (valid for 24h)
+app.get('/api/turn-credentials', (req, res) => {
+  const ttl = 86400; // 24 hours
+  const timestamp = Math.floor(Date.now() / 1000) + ttl;
+  const username = timestamp + ':retroplay';
+  const hmac = crypto.createHmac('sha1', TURN_SECRET);
+  hmac.update(username);
+  const credential = hmac.digest('base64');
+  res.json({ username, credential, ttl });
 });
 
 // API: Search ROMs across all systems

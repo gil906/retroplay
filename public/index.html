@@ -516,7 +516,7 @@
     <input type="text" id="searchInput" placeholder="Search games..." autocomplete="off">
   </div>
   <button class="nav-upload-btn" id="navStoreBtn" style="background:#6c5ce7;margin-right:0.5rem;">🏪 <span class="btn-text">ROM Store</span></button>
-  <button class="nav-upload-btn" id="navUploadBtn">📤 <span class="btn-text">Upload</span></button>
+  <button class="nav-upload-btn" id="navUploadBtn" style="display:none;">📤 <span class="btn-text">Upload</span></button>
   <button class="nav-upload-btn" id="navAuthBtn" style="background:#00b894;margin-left:0.5rem;">👤 <span class="btn-text" id="authBtnText">Login</span></button>
   <button class="theme-toggle" id="themeToggle" title="Toggle theme">🌙</button>
 </nav>
@@ -684,6 +684,7 @@ let activeFilter = 'all';
 let searchDebounce = null;
 let pendingUploadFiles = [];
 let ctxTarget = null; // { system, rom, core }
+let userIsAdmin = false;
 
 // ── Fetch & Render ──
 async function loadSystems() {
@@ -823,7 +824,7 @@ function gameCardHtml(rom, sys) {
         <div class="game-card-system" style="background:${meta.color}">${meta.icon} ${meta.name}</div>
       </div>
     </a>
-    <button class="game-card-menu" data-menu="true">⋯</button>
+    ${userIsAdmin ? '<button class="game-card-menu" data-menu="true">⋯</button>' : ''}
   </div>`;
 }
 
@@ -850,7 +851,7 @@ function renderSearchResults(results) {
           <div class="game-card-system" style="background:${meta.color}">${meta.icon} ${r.systemName || meta.name}</div>
         </div>
       </a>
-      <button class="game-card-menu" data-menu="true">⋯</button>
+      ${userIsAdmin ? '<button class="game-card-menu" data-menu="true">⋯</button>' : ''}
     </div>`;
   }).join('');
   container.innerHTML = `<div class="section-title">Search Results (${results.length})</div><div class="game-grid">${cards}</div>`;
@@ -906,6 +907,7 @@ document.getElementById('mainContent').addEventListener('click', function(e) {
 });
 
 function showCtxMenu(x, y) {
+  if (!userIsAdmin) return; // Non-admins can't manage ROMs
   const menu = document.getElementById('ctxMenu');
   menu.innerHTML = `
     <button onclick="triggerCoverUpload()">🖼️ Upload Cover Art</button>
@@ -913,7 +915,6 @@ function showCtxMenu(x, y) {
     <hr>
     <button class="danger" onclick="deleteRom()">🗑️ Delete ROM</button>`;
   menu.style.display = 'block';
-  // Position: keep on screen
   menu.style.left = Math.min(x, window.innerWidth - 190) + 'px';
   menu.style.top = Math.min(y, window.innerHeight - 100) + 'px';
 }
@@ -1548,9 +1549,35 @@ async function handleGoogleCredential(response) {
 // ── Init ──
 const savedTheme = localStorage.getItem('retroplay_theme') || 'dark';
 setTheme(savedTheme);
-checkAuth();
-initGoogleSignIn();
-loadSystems();
+
+async function checkPermissions() {
+  try {
+    const headers = {};
+    if (authToken) headers['Authorization'] = 'Bearer ' + authToken;
+    const res = await fetch('/api/auth/permissions', { headers });
+    const data = await res.json();
+    userIsAdmin = data.isAdmin;
+  } catch(e) { userIsAdmin = false; }
+  // Show/hide admin UI
+  document.getElementById('navUploadBtn').style.display = userIsAdmin ? '' : 'none';
+  // Re-render cards to show/hide menu buttons
+  if (allSystems.length > 0) render();
+}
+
+async function initApp() {
+  await checkAuth();
+  await checkPermissions();
+  initGoogleSignIn();
+  loadSystems();
+}
+initApp();
+
+// Re-check permissions after login/logout
+const origUpdateAuthUI = updateAuthUI;
+updateAuthUI = function() {
+  origUpdateAuthUI();
+  checkPermissions();
+};
 </script>
 </body>
 </html>

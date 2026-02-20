@@ -22,6 +22,8 @@ const COVERS_DIR = '/data/covers';
 const USERS_FILE = '/data/users.json';
 const JWT_SECRET = process.env.JWT_SECRET || 'retroplay-lan-secret-' + (fs.existsSync(USERS_FILE) ? fs.statSync(USERS_FILE).birthtimeMs : Date.now());
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'gdleonq@gmail.com';
+const ADMIN_SUBNET = process.env.ADMIN_SUBNET || '192.168.68.0/22';
 
 // ── User helpers ──
 function loadUsers() {
@@ -30,6 +32,49 @@ function loadUsers() {
 function saveUsers(users) {
   fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
 }
+
+function getClientIp(req) {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (forwarded) return forwarded.split(',')[0].trim();
+  return req.headers['x-real-ip'] || req.socket.remoteAddress || '';
+}
+
+function ipInSubnet(ip, cidr) {
+  // Handle IPv4-mapped IPv6 (::ffff:192.168.x.x)
+  const cleanIp = ip.replace(/^::ffff:/, '');
+  const [subnet, bits] = cidr.split('/');
+  const mask = ~(0xFFFFFFFF >>> parseInt(bits));
+  const ipParts = cleanIp.split('.').map(Number);
+  const subParts = subnet.split('.').map(Number);
+  if (ipParts.length !== 4 || subParts.length !== 4) return false;
+  const ipNum = (ipParts[0] << 24 | ipParts[1] << 16 | ipParts[2] << 8 | ipParts[3]) >>> 0;
+  const subNum = (subParts[0] << 24 | subParts[1] << 16 | subParts[2] << 8 | subParts[3]) >>> 0;
+  return (ipNum & mask) === (subNum & mask);
+}
+
+function isAdmin(req) {
+  // Check if user is admin by email
+  const token = (req.headers.authorization || '').replace('Bearer ', '');
+  if (token) {
+    try {
+      const user = jwt.verify(token, JWT_SECRET);
+      if (user.email === ADMIN_EMAIL) return true;
+    } catch(e) {}
+  }
+  // Check if request comes from admin subnet or local network
+  const ip = getClientIp(req);
+  if (ipInSubnet(ip, ADMIN_SUBNET)) return true;
+  // Allow localhost and Docker bridge
+  if (ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1') return true;
+  if (ipInSubnet(ip, '172.16.0.0/12')) return true;
+  return false;
+}
+
+function adminMiddleware(req, res, next) {
+  if (isAdmin(req)) return next();
+  res.status(403).json({ error: 'Admin access required' });
+}
+
 function authMiddleware(req, res, next) {
   const token = (req.headers.authorization || '').replace('Bearer ', '');
   if (!token) return res.status(401).json({ error: 'Not logged in' });
@@ -120,22 +165,22 @@ app.get('/api/systems', (req, res) => {
   res.json(result);
 });
 
-// API: Upload ROMs
-app.post('/api/roms/:system', uploadRom.array('roms', 50), (req, res) => {
+// API: Upload ROMs (admin only)
+app.post('/api/roms/:system', adminMiddleware, uploadRom.array('roms', 50), (req, res) => {
   const system = req.params.system;
   if (!SYSTEMS[system]) return res.status(400).json({ error: 'Unknown system' });
   const uploaded = (req.files || []).map(f => f.originalname);
   res.json({ ok: true, system, uploaded, count: uploaded.length });
 });
 
-// API: Upload cover image for a ROM
-app.post('/api/covers/:system/:romName', uploadCover.single('cover'), (req, res) => {
+// API: Upload cover image for a ROM (admin only)
+app.post('/api/covers/:system/:romName', adminMiddleware, uploadCover.single('cover'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
   res.json({ ok: true, path: '/covers/' + req.params.system + '/' + req.file.filename });
 });
 
-// API: Delete a ROM
-app.delete('/api/roms/:system/:file', (req, res) => {
+// API: Delete a ROM (admin only)
+app.delete('/api/roms/:system/:file', adminMiddleware, (req, res) => {
   const filePath = path.join(ROMS_DIR, req.params.system, req.params.file);
   if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'not found' });
   try {
@@ -209,6 +254,11 @@ app.post('/api/auth/login', (req, res) => {
 
 app.get('/api/auth/me', authMiddleware, (req, res) => {
   res.json({ user: req.user });
+});
+
+// Check user permissions (admin status)
+app.get('/api/auth/permissions', (req, res) => {
+  res.json({ isAdmin: isAdmin(req) });
 });
 
 // Google OAuth: verify ID token and create/login user
@@ -567,7 +617,7 @@ app.get('/api/store/search', async (req, res) => {
 });
 
 // Auto-fetch cover art for a ROM by searching romsgames.net
-app.post('/api/covers/fetch/:system/:romName', async (req, res) => {
+app.post('/api/covers/fetch/:system/:romName', adminMiddleware, async (req, res) => {
   const { system, romName } = req.params;
   if (!SYSTEMS[system]) return res.status(400).json({ error: 'Unknown system' });
 

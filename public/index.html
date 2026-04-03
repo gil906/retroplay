@@ -47,22 +47,47 @@
     overflow-x: hidden;
     transition: var(--transition-theme);
   }
+  #bg-canvas {
+    position: fixed; inset: 0; z-index: -1;
+    pointer-events: none;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: -1;
+    background: 
+      radial-gradient(ellipse at 20% 50%, rgba(233,69,96,0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 20%, rgba(108,92,231,0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 80%, rgba(0,184,148,0.06) 0%, transparent 50%);
+    animation: bgPulse 15s ease-in-out infinite alternate;
+  }
+  @keyframes bgPulse {
+    0% { opacity: 0.6; }
+    100% { opacity: 1; }
+  }
 
   /* ── Navbar ── */
   .navbar {
     position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
     display: flex; align-items: center; justify-content: space-between;
     padding: 0 1.5rem; height: 60px;
-    background: var(--bg-nav);
-    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-    border-bottom: 1px solid var(--bg-input-border);
+    background: rgba(10,10,20,0.6);
+    backdrop-filter: blur(20px) saturate(1.5); -webkit-backdrop-filter: blur(20px) saturate(1.5);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    box-shadow: 0 4px 30px rgba(0,0,0,0.3);
     transition: var(--transition-theme);
   }
   .nav-logo {
-    font-size: 1.4rem; font-weight: 800; white-space: nowrap;
-    background: linear-gradient(135deg, #e94560, #ff6b6b);
+    font-size: 1.5rem; font-weight: 800; white-space: nowrap;
+    background: linear-gradient(135deg, #e94560, #ff6b6b, #6c5ce7, #e94560);
+    background-size: 300% 300%;
     -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     background-clip: text;
+    animation: logoGradient 4s ease infinite;
+  }
+  @keyframes logoGradient {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
   }
   .nav-search {
     flex: 0 1 420px; position: relative;
@@ -89,18 +114,27 @@
 
   /* ── Hero Section ── */
   .hero {
-    margin-top: 60px; padding: 2.5rem 1.5rem 2rem;
-    background: linear-gradient(180deg, rgba(233,69,96,0.10) 0%, transparent 100%);
+    margin-top: 60px; padding: 3rem 1.5rem 2.5rem;
+    background: linear-gradient(180deg, rgba(233,69,96,0.12) 0%, rgba(108,92,231,0.05) 50%, transparent 100%);
+    position: relative; overflow: hidden;
+  }
+  .hero::before {
+    content: ''; position: absolute; inset: 0;
+    background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
   }
   .hero-inner {
     max-width: 1400px; margin: 0 auto;
     display: flex; align-items: center; gap: 2rem;
   }
   .hero-cover {
-    width: 180px; height: 240px; border-radius: 14px; overflow: hidden;
+    width: 200px; height: 267px; border-radius: 16px; overflow: hidden;
     flex-shrink: 0; position: relative;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    box-shadow: 0 16px 48px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05);
+    transform: perspective(800px) rotateY(-5deg);
+    transition: transform 0.5s ease;
   }
+  .hero-cover:hover { transform: perspective(800px) rotateY(0deg); }
   .hero-cover img { width: 100%; height: 100%; object-fit: cover; }
   .hero-cover-placeholder {
     width: 100%; height: 100%;
@@ -114,17 +148,43 @@
     margin-bottom: 0.6rem;
   }
   .hero-info h2 {
-    font-size: 2rem; font-weight: 800; line-height: 1.15;
-    margin-bottom: 0.5rem; color: #fff;
+    font-size: 2.2rem; font-weight: 800; line-height: 1.1;
+    margin-bottom: 0.6rem;
+    background: linear-gradient(135deg, #fff 0%, #e0e0ff 50%, #e94560 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero-tagline {
+    color: #999; font-size: 0.95rem; font-style: italic;
+    margin-bottom: 0.4rem;
+    opacity: 0; animation: fadeInUp 1s ease 0.5s forwards;
+  }
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
   }
   .hero-info p { color: #888; font-size: 0.9rem; margin-bottom: 1.2rem; }
   .hero-play-btn {
-    display: inline-flex; align-items: center; gap: 0.5rem;
-    background: #e94560; color: #fff; text-decoration: none;
-    padding: 0.7rem 1.8rem; border-radius: 10px;
-    font-weight: 700; font-size: 1rem; transition: background 0.2s, transform 0.15s;
+    display: inline-flex; align-items: center; gap: 0.6rem;
+    background: linear-gradient(135deg, #e94560, #d6364f);
+    color: #fff; text-decoration: none;
+    padding: 0.8rem 2rem; border-radius: 12px;
+    font-weight: 700; font-size: 1rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 20px rgba(233,69,96,0.4);
+    position: relative; overflow: hidden;
   }
-  .hero-play-btn:hover { background: #d6364f; transform: translateY(-2px); }
+  .hero-play-btn::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(135deg, transparent 30%, rgba(255,255,255,0.2) 50%, transparent 70%);
+    transform: translateX(-100%);
+    transition: transform 0.6s ease;
+  }
+  .hero-play-btn:hover::after { transform: translateX(100%); }
+  .hero-play-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 30px rgba(233,69,96,0.5);
+  }
 
   /* ── Filter Bar ── */
   .filter-bar {
@@ -140,15 +200,22 @@
   }
   .filter-scroll::-webkit-scrollbar { display: none; }
   .filter-pill {
-    display: flex; align-items: center; gap: 0.35rem;
-    padding: 0.4rem 0.9rem; border-radius: 20px;
-    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08);
-    color: #aaa; font-size: 0.8rem; font-weight: 500; cursor: pointer;
-    white-space: nowrap; transition: all 0.2s ease; font-family: inherit;
-    user-select: none;
+    display: flex; align-items: center; gap: 0.4rem;
+    padding: 0.45rem 1rem; border-radius: 24px;
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06);
+    color: #999; font-size: 0.82rem; font-weight: 600; cursor: pointer;
+    white-space: nowrap; transition: all 0.3s cubic-bezier(.17,.67,.35,1.2);
+    font-family: inherit; user-select: none;
   }
-  .filter-pill:hover { background: rgba(255,255,255,0.1); color: #f0f0f0; }
-  .filter-pill.active { color: #fff; border-color: transparent; }
+  .filter-pill:hover {
+    background: rgba(255,255,255,0.1); color: #f0f0f0;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  }
+  .filter-pill.active {
+    color: #fff; border-color: transparent;
+    box-shadow: 0 4px 15px rgba(233,69,96,0.3);
+  }
   .filter-pill .pill-count {
     background: rgba(255,255,255,0.15); padding: 0.1rem 0.45rem;
     border-radius: 10px; font-size: 0.7rem; font-weight: 600;
@@ -183,16 +250,44 @@
   }
 
   /* ── Game Card ── */
+  @keyframes cardSlideUp {
+    from { opacity: 0; transform: translateY(40px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
   .game-card {
-    position: relative; border-radius: 12px; overflow: hidden;
-    background: var(--bg-card); border: 1px solid var(--bg-card-border);
-    aspect-ratio: 3 / 4; transition: transform 0.2s ease, box-shadow 0.2s ease, var(--transition-theme);
+    position: relative; border-radius: 16px; overflow: hidden;
+    background: rgba(26,26,46,0.6);
+    border: 1px solid rgba(255,255,255,0.06);
+    aspect-ratio: 3 / 4;
+    transition: transform 0.4s cubic-bezier(.17,.67,.35,1.2), box-shadow 0.4s ease;
     cursor: pointer;
+    backdrop-filter: blur(4px);
+    animation: cardSlideUp 0.6s ease backwards;
   }
+  .game-card:nth-child(1) { animation-delay: 0.05s; }
+  .game-card:nth-child(2) { animation-delay: 0.1s; }
+  .game-card:nth-child(3) { animation-delay: 0.15s; }
+  .game-card:nth-child(4) { animation-delay: 0.2s; }
+  .game-card:nth-child(5) { animation-delay: 0.25s; }
+  .game-card:nth-child(6) { animation-delay: 0.3s; }
+  .game-card:nth-child(7) { animation-delay: 0.35s; }
+  .game-card:nth-child(8) { animation-delay: 0.4s; }
+  .game-card:nth-child(9) { animation-delay: 0.45s; }
+  .game-card:nth-child(10) { animation-delay: 0.5s; }
+  .game-card:nth-child(11) { animation-delay: 0.55s; }
+  .game-card:nth-child(12) { animation-delay: 0.6s; }
   .game-card:hover {
-    transform: scale(1.05); z-index: 10;
-    box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+    transform: scale(1.08) translateY(-8px); z-index: 10;
+    box-shadow: 0 20px 60px rgba(233,69,96,0.3), 0 0 0 1px rgba(233,69,96,0.2);
   }
+  .game-card::before {
+    content: ''; position: absolute; inset: -1px; z-index: -1;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(233,69,96,0.4), rgba(108,92,231,0.4));
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+  .game-card:hover::before { opacity: 1; }
   .game-card-link {
     display: block; width: 100%; height: 100%;
     text-decoration: none; color: inherit;
@@ -237,14 +332,17 @@
   }
   .game-card:hover .game-card-play { opacity: 1; }
   .play-circle {
-    width: 52px; height: 52px; border-radius: 50%;
-    background: rgba(233,69,96,0.9); display: flex;
-    align-items: center; justify-content: center;
-    font-size: 1.3rem; color: #fff;
-    box-shadow: 0 4px 20px rgba(233,69,96,0.4);
-    transition: transform 0.2s ease;
+    width: 56px; height: 56px; border-radius: 50%;
+    background: linear-gradient(135deg, rgba(233,69,96,0.95), rgba(214,54,79,0.95));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem; color: #fff;
+    box-shadow: 0 8px 32px rgba(233,69,96,0.5);
+    transition: all 0.3s cubic-bezier(.17,.67,.35,1.2);
   }
-  .game-card:hover .play-circle { transform: scale(1.1); }
+  .game-card:hover .play-circle {
+    transform: scale(1.2);
+    box-shadow: 0 12px 40px rgba(233,69,96,0.6);
+  }
 
   /* Kebab menu button */
   .game-card-menu {
@@ -286,7 +384,11 @@
   }
   .modal-overlay.open { display: flex; }
   .modal {
-    background: var(--bg-secondary); border: 1px solid var(--bg-card-border); border-radius: 16px;
+    background: rgba(18,18,31,0.95);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 20px;
+    backdrop-filter: blur(20px);
+    box-shadow: 0 24px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.03);
     width: 90%; max-width: 520px; padding: 2rem;
     position: relative; animation: modalIn 0.2s ease;
     transition: var(--transition-theme);
@@ -359,8 +461,21 @@
   .empty-state {
     text-align: center; padding: 6rem 2rem;
   }
-  .empty-state .empty-icon { font-size: 4rem; margin-bottom: 1rem; opacity: 0.6; }
-  .empty-state h2 { font-size: 1.6rem; font-weight: 700; margin-bottom: 0.5rem; }
+  .empty-state .empty-icon {
+    font-size: 5rem; margin-bottom: 1.2rem;
+    animation: float 3s ease-in-out infinite;
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-15px); }
+  }
+  .empty-state h2 {
+    font-size: 1.8rem; font-weight: 800;
+    background: linear-gradient(135deg, #fff, #e94560);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 0.5rem;
+  }
   .empty-state p { color: #888; margin-bottom: 2rem; font-size: 1rem; }
   .empty-upload-btn {
     display: inline-flex; align-items: center; gap: 0.5rem;
@@ -397,14 +512,28 @@
   .no-results p { font-size: 1rem; }
 
   /* ── System Row headers ── */
-  .system-section { margin-bottom: 2rem; }
+  .system-section { margin-bottom: 2.5rem; position: relative; }
   .system-section-header {
-    display: flex; align-items: center; gap: 0.5rem;
-    margin-bottom: 0.8rem;
+    display: flex; align-items: center; gap: 0.6rem;
+    margin-bottom: 1rem; padding-bottom: 0.8rem;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
   }
-  .system-section-header .sys-icon { font-size: 1.3rem; }
-  .system-section-header h3 { font-size: 1.15rem; font-weight: 700; }
+  .system-section-header .sys-icon {
+    font-size: 1.5rem;
+    filter: drop-shadow(0 0 8px currentColor);
+  }
+  .system-section-header h3 {
+    font-size: 1.2rem; font-weight: 700;
+    background: linear-gradient(135deg, #fff, #ccc);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
   .system-section-header .sys-count { color: #666; font-size: 0.85rem; margin-left: 0.3rem; }
+  .system-lore {
+    font-size: 0.78rem; color: #666; font-style: italic;
+    margin-bottom: 0.8rem; max-width: 600px;
+    opacity: 0; animation: fadeInUp 0.8s ease forwards;
+  }
   /* ── Store Modal extras ── */
   #storeGrid::-webkit-scrollbar { width: 6px; }
   #storeGrid::-webkit-scrollbar-track { background: transparent; }
@@ -504,9 +633,61 @@
     content: ''; flex: 1; height: 1px; background: var(--bg-card-border);
   }
 
+  /* ── Scrollbar & Selection ── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
+  ::selection { background: rgba(233,69,96,0.3); color: #fff; }
+
+  /* ── Recently Played Section ── */
+  .recently-played {
+    margin-bottom: 2.5rem;
+  }
+  .recently-played-grid {
+    display: flex; gap: 1rem; overflow-x: auto;
+    padding-bottom: 0.5rem;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.1) transparent;
+  }
+  .recently-played-grid::-webkit-scrollbar { height: 4px; }
+  .recently-played-grid::-webkit-scrollbar-track { background: transparent; }
+  .recently-played-grid::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+  .recent-card {
+    flex: 0 0 180px; border-radius: 12px; overflow: hidden;
+    background: rgba(26,26,46,0.6); border: 1px solid rgba(255,255,255,0.06);
+    cursor: pointer; transition: all 0.3s ease;
+    position: relative;
+  }
+  .recent-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.4);
+  }
+  .recent-card-img {
+    width: 100%; aspect-ratio: 3/4; object-fit: cover;
+  }
+  .recent-card-info {
+    padding: 0.6rem;
+  }
+  .recent-card-name {
+    font-size: 0.75rem; font-weight: 600; color: #fff;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .recent-card-time {
+    font-size: 0.65rem; color: #666; margin-top: 0.2rem;
+  }
+  .recent-card-badge {
+    position: absolute; top: 0.4rem; right: 0.4rem;
+    background: rgba(233,69,96,0.9); color: #fff;
+    font-size: 0.6rem; font-weight: 700;
+    padding: 0.15rem 0.4rem; border-radius: 4px;
+  }
+
 </style>
 </head>
 <body>
+
+<canvas id="bg-canvas"></canvas>
 
 <!-- ── Navbar ── -->
 <nav class="navbar">
@@ -679,6 +860,20 @@ const SYSTEM_META = {
   arcade:    { name: 'Arcade',        icon: '🕹️', color: '#eab308', gradient: ['#eab308','#a16207'] },
 };
 
+const SYSTEM_LORE = {
+  nes: "Where legends were born. 8-bit perfection from 1983.",
+  snes: "The golden age of gaming. 16-bit masterpieces await.",
+  n64: "The dawn of 3D gaming. Revolutionary worlds to explore.",
+  gb: "Gaming on the go. Pocket-sized adventures since 1989.",
+  gba: "Portable powerhouse. A handheld SNES in your pocket.",
+  nds: "Dual-screen innovation. Touch the future of gaming.",
+  psp: "Console-quality portable. Sony's handheld revolution.",
+  segaMD: "Blast processing! SEGA's answer to Nintendo's throne.",
+  segaMS: "The 8-bit challenger. SEGA's first home console warrior.",
+  atari2600: "The pioneer. Where home gaming began in 1977.",
+  arcade: "Insert coin to continue. The arcade experience, at home.",
+};
+
 let allSystems = [];
 let activeFilter = 'all';
 let searchDebounce = null;
@@ -736,11 +931,27 @@ function renderHero(totalRoms) {
         <div class="hero-info">
           <span class="hero-badge" style="background:${meta.color}">${meta.icon} ${meta.name}</span>
           <h2>${escHtml(featured.name)}</h2>
+          <div class="hero-tagline">Press Start to Relive the Classics</div>
           <p>${totalRoms} game${totalRoms !== 1 ? 's' : ''} across ${allSystems.filter(s=>s.romCount>0).length} system${allSystems.filter(s=>s.romCount>0).length !== 1 ? 's' : ''}</p>
           <a href="${playerUrl}" class="hero-play-btn">▶ Start Playing</a>
         </div>
       </div>
     </div>`;
+  // Recently played section
+  const recent = getRecentlyPlayed();
+  if (recent.length > 0) {
+    let recentHtml = '<div class="recently-played" style="max-width:1400px;margin:0 auto;padding:0 1.5rem;"><div class="system-section-header"><span class="sys-icon">🕹️</span><h3>Recently Played</h3></div><div class="recently-played-grid">';
+    for (const r of recent.slice(0, 12)) {
+      const rmeta = SYSTEM_META[r.system] || { icon: '🎮', color: '#e94560', gradient: ['#e94560','#8b0000'] };
+      const rUrl = `/player.html?system=${r.system}&core=${r.core}&rom=${encodeURIComponent(r.file)}`;
+      const coverEl = r.cover
+        ? `<img class="recent-card-img" src="${r.cover}" alt="${escHtml(r.name)}" loading="lazy">`
+        : `<div class="recent-card-img" style="display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,${rmeta.gradient[0]},${rmeta.gradient[1]});font-size:2rem;">${rmeta.icon}</div>`;
+      recentHtml += `<a href="${rUrl}" class="recent-card" style="text-decoration:none;color:inherit;">${coverEl}<div class="recent-card-badge">${rmeta.icon}</div><div class="recent-card-info"><div class="recent-card-name">${escHtml(r.name)}</div><div class="recent-card-time">${timeAgo(r.time)}</div></div></a>`;
+    }
+    recentHtml += '</div></div>';
+    hero.innerHTML += recentHtml;
+  }
 }
 
 function renderFilters(totalRoms) {
@@ -787,6 +998,7 @@ function renderGames() {
           <h3>${meta.name}</h3>
           <span class="sys-count">${sys.romCount}</span>
         </div>
+        <p class="system-lore">${SYSTEM_LORE[sys.id] || ''}</p>
         <div class="game-grid">${sys.roms.map(rom => gameCardHtml(rom, sys)).join('')}</div>
       </div>`;
     }
@@ -802,6 +1014,7 @@ function renderGames() {
           <h3>${meta.name}</h3>
           <span class="sys-count">${sys.romCount}</span>
         </div>
+        <p class="system-lore">${SYSTEM_LORE[sys.id] || ''}</p>
         <div class="game-grid">${sys.roms.map(rom => gameCardHtml(rom, sys)).join('')}</div>
       </div>`;
   }
@@ -1578,6 +1791,130 @@ updateAuthUI = function() {
   origUpdateAuthUI();
   checkPermissions();
 };
+
+// ── Recently Played ──
+function getRecentlyPlayed() {
+  try { return JSON.parse(localStorage.getItem('retroplay_recent') || '[]'); } catch(e) { return []; }
+}
+
+function trackPlay(system, core, file, name, cover) {
+  let recent = getRecentlyPlayed();
+  recent = recent.filter(r => !(r.system === system && r.file === file));
+  recent.unshift({ system, core, file, name, cover, time: Date.now() });
+  if (recent.length > 20) recent = recent.slice(0, 20);
+  localStorage.setItem('retroplay_recent', JSON.stringify(recent));
+}
+
+function timeAgo(ts) {
+  const diff = Date.now() - ts;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return mins + 'm ago';
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs + 'h ago';
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return days + 'd ago';
+  return Math.floor(days / 7) + 'w ago';
+}
+
+// Track game card clicks for recently played
+document.getElementById('mainContent').addEventListener('click', function(e) {
+  const link = e.target.closest('.game-card-link');
+  if (!link) return;
+  const card = link.closest('.game-card');
+  if (!card) return;
+  const system = card.dataset.system;
+  const core = card.dataset.core;
+  const file = card.dataset.file;
+  const name = card.dataset.name;
+  const coverImg = card.querySelector('.game-card-cover img');
+  const cover = coverImg ? coverImg.getAttribute('src') : '';
+  trackPlay(system, core, file, name, cover);
+});
+
+// Also track hero play button clicks
+document.getElementById('heroSection').addEventListener('click', function(e) {
+  const btn = e.target.closest('.hero-play-btn');
+  if (!btn) return;
+  const heroCard = document.querySelector('.hero-cover img');
+  const heroTitle = document.querySelector('.hero-info h2');
+  const heroBadge = document.querySelector('.hero-badge');
+  if (!heroTitle) return;
+  const url = new URL(btn.href, window.location.origin);
+  const system = url.searchParams.get('system') || '';
+  const core = url.searchParams.get('core') || '';
+  const file = url.searchParams.get('rom') || '';
+  const name = heroTitle.textContent || '';
+  const cover = heroCard ? heroCard.getAttribute('src') : '';
+  trackPlay(system, core, file, name, cover);
+});
+
+// ── Animated Background ──
+(function() {
+  const canvas = document.getElementById('bg-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let particles = [];
+  const PARTICLE_COUNT = 80;
+  
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  
+  function createParticles() {
+    particles = [];
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+      particles.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        size: Math.random() * 2 + 0.5,
+        speedX: (Math.random() - 0.5) * 0.3,
+        speedY: (Math.random() - 0.5) * 0.3,
+        opacity: Math.random() * 0.5 + 0.1,
+        hue: Math.random() > 0.5 ? 350 : 260,
+      });
+    }
+  }
+  
+  function animate() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (const p of particles) {
+      p.x += p.speedX;
+      p.y += p.speedY;
+      if (p.x < 0) p.x = canvas.width;
+      if (p.x > canvas.width) p.x = 0;
+      if (p.y < 0) p.y = canvas.height;
+      if (p.y > canvas.height) p.y = 0;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fillStyle = `hsla(${p.hue}, 70%, 60%, ${p.opacity})`;
+      ctx.fill();
+    }
+    // Draw connections
+    for (let i = 0; i < particles.length; i++) {
+      for (let j = i + 1; j < particles.length; j++) {
+        const dx = particles[i].x - particles[j].x;
+        const dy = particles[i].y - particles[j].y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 120) {
+          ctx.beginPath();
+          ctx.moveTo(particles[i].x, particles[i].y);
+          ctx.lineTo(particles[j].x, particles[j].y);
+          ctx.strokeStyle = `rgba(233, 69, 96, ${0.06 * (1 - dist / 120)})`;
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+        }
+      }
+    }
+    requestAnimationFrame(animate);
+  }
+  
+  resize();
+  createParticles();
+  animate();
+  window.addEventListener('resize', () => { resize(); createParticles(); });
+})();
 </script>
 </body>
 </html>

@@ -24,7 +24,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'retroplay-lan-secret-' + (fs.exist
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'gdleonq@gmail.com';
 const ADMIN_SUBNET = process.env.ADMIN_SUBNET || '192.168.68.0/22';
-const TURN_SECRET = process.env.TURN_SECRET || 'RETROPLAY_TURN_SECRET_CHANGE_ME';
+const TURN_SECRET = process.env.TURN_SECRET || "1!4PqMG';m1<y2k^D7f=Z[X.;q'iz/N]NW";
 
 // ── User helpers ──
 function loadUsers() {
@@ -85,27 +85,44 @@ function authMiddleware(req, res, next) {
   } catch(e) { res.status(401).json({ error: 'Invalid token' }); }
 }
 
+// Path traversal guard: reject any param containing ../ or absolute paths
+function safePath(...segments) {
+  const joined = path.join(...segments);
+  const resolved = path.resolve(joined);
+  const base = path.resolve(segments[0]);
+  if (!resolved.startsWith(base)) {
+    throw new Error('Path traversal detected');
+  }
+  return resolved;
+}
+
+function sanitizeParam(param) {
+  return path.basename(param);
+}
+
 // Multer storage: saves uploaded ROMs to the correct system directory
 const romStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const dir = path.join(ROMS_DIR, req.params.system);
+    const system = sanitizeParam(req.params.system);
+    const dir = path.join(ROMS_DIR, system);
     fs.mkdirSync(dir, { recursive: true });
     cb(null, dir);
   },
-  filename: (req, file, cb) => cb(null, file.originalname),
+  filename: (req, file, cb) => cb(null, sanitizeParam(file.originalname)),
 });
 const uploadRom = multer({ storage: romStorage, limits: { fileSize: 2 * 1024 * 1024 * 1024 } });
 
 // Multer for cover images
 const coverStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const dir = path.join(COVERS_DIR, req.params.system);
+    const system = sanitizeParam(req.params.system);
+    const dir = path.join(COVERS_DIR, system);
     fs.mkdirSync(dir, { recursive: true });
     cb(null, dir);
   },
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname) || '.jpg';
-    cb(null, req.params.romName + ext);
+    cb(null, sanitizeParam(req.params.romName) + ext);
   },
 });
 const uploadCover = multer({ storage: coverStorage, limits: { fileSize: 10 * 1024 * 1024 } });
@@ -123,6 +140,13 @@ const SYSTEMS = {
   atari2600: { core: 'atari2600', name: 'Atari 2600',                 ext: ['.a26', '.bin', '.zip'] },
   arcade:    { core: 'arcade',    name: 'Arcade (FBNeo)',             ext: ['.zip'] },
 };
+
+// Serve player page with cross-origin isolation headers (enables SharedArrayBuffer for EmulatorJS WASM threads on mobile)
+app.get('/player.html', (req, res) => {
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  res.setHeader('Cross-Origin-Embedder-Policy', 'credentialless');
+  res.sendFile(path.join(__dirname, 'public', 'player.html'));
+});
 
 // Serve static frontend
 app.use(express.static(path.join(__dirname, 'public')));
@@ -182,9 +206,9 @@ app.post('/api/covers/:system/:romName', adminMiddleware, uploadCover.single('co
 
 // API: Delete a ROM (admin only)
 app.delete('/api/roms/:system/:file', adminMiddleware, (req, res) => {
-  const filePath = path.join(ROMS_DIR, req.params.system, req.params.file);
-  if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'not found' });
   try {
+    const filePath = safePath(ROMS_DIR, sanitizeParam(req.params.system), sanitizeParam(req.params.file));
+    if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'not found' });
     fs.unlinkSync(filePath);
     res.json({ ok: true });
   } catch (e) {
@@ -200,12 +224,14 @@ app.put('/api/saves/:system/:file', express.raw({ limit: '50mb', type: '*/*' }),
     if (token) {
       try {
         const user = jwt.verify(token, JWT_SECRET);
-        saveBase = path.join(SAVES_DIR, 'users', user.id);
+        saveBase = path.join(SAVES_DIR, 'users', sanitizeParam(user.id));
       } catch(e) {}
     }
-    const dir = path.join(saveBase, req.params.system);
+    const system = sanitizeParam(req.params.system);
+    const file = sanitizeParam(req.params.file);
+    const dir = safePath(saveBase, system);
     fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(path.join(dir, req.params.file), req.body);
+    fs.writeFileSync(path.join(dir, file), req.body);
     res.json({ ok: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -219,11 +245,15 @@ app.get('/api/saves/:system/:file', (req, res) => {
   if (token) {
     try {
       const user = jwt.verify(token, JWT_SECRET);
-      saveBase = path.join(SAVES_DIR, 'users', user.id);
+      saveBase = path.join(SAVES_DIR, 'users', sanitizeParam(user.id));
     } catch(e) {}
   }
-  const savePath = path.join(saveBase, req.params.system, req.params.file);
-  if (fs.existsSync(savePath)) return res.sendFile(savePath);
+  const system = sanitizeParam(req.params.system);
+  const file = sanitizeParam(req.params.file);
+  try {
+    const savePath = safePath(saveBase, system, file);
+    if (fs.existsSync(savePath)) return res.sendFile(savePath);
+  } catch(e) {}
   res.status(404).json({ error: 'not found' });
 });
 
@@ -683,6 +713,10 @@ app.post('/api/covers/fetch/:system/:romName', adminMiddleware, async (req, res)
 
 const io = new SocketIO(server, {
   cors: { origin: '*', methods: ['GET', 'POST'], credentials: true },
+  // Disconnect clients that stop responding (closed tab, lost connection)
+  pingInterval: 10000,
+  pingTimeout: 5000,
+  connectTimeout: 10000,
 });
 
 let netplayRooms = {};
@@ -694,7 +728,13 @@ setInterval(() => {
       delete netplayRooms[sessionId];
     }
   }
-}, 60000);
+  // Log active connections for monitoring
+  const sockCount = io.engine ? io.engine.clientsCount : 0;
+  const roomCount = Object.keys(netplayRooms).length;
+  if (sockCount > 0 || roomCount > 0) {
+    console.log(`[cleanup] ${sockCount} socket(s), ${roomCount} netplay room(s)`);
+  }
+}, 30000);
 
 // List open rooms for a game
 app.get('/list', (req, res) => {
@@ -809,3 +849,22 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`EmulatorJS server running on http://0.0.0.0:${PORT}`);
   console.log(`Netplay signaling server active on same port`);
 });
+
+// Graceful shutdown
+function shutdown(signal) {
+  console.log(`\n${signal} received — shutting down gracefully...`);
+  io.close(() => {
+    console.log('Socket.IO connections closed');
+  });
+  server.close(() => {
+    console.log('HTTP server closed');
+    process.exit(0);
+  });
+  // Force exit after 10s if connections hang
+  setTimeout(() => {
+    console.error('Forced shutdown after timeout');
+    process.exit(1);
+  }, 10000).unref();
+}
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));

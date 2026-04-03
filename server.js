@@ -400,11 +400,24 @@ const STORE_SYSTEMS = {
   psp:       { storeSlug: 'playstation-portable',   romPrefix: 'playstation-portable-rom-' },
   segaMD:    { storeSlug: 'sega-genesis',           romPrefix: 'sega-genesis-rom-' },
   segaMS:    { storeSlug: 'sega-master-system',     romPrefix: 'sega-master-system-rom-' },
-  atari2600: { storeSlug: 'atari-2600',             romPrefix: 'atari-2006-rom-' },
+  atari2600: { storeSlug: 'atari-2600',             romPrefix: 'atari-2600-rom-' },
+  arcade:    { storeSlug: 'arcade',                 romPrefix: 'arcade-rom-' },
 };
+
+function validateExternalUrl(url) {
+  let parsed;
+  try { parsed = new URL(url); } catch(e) { throw new Error('Invalid URL'); }
+  if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error('Only http/https allowed');
+  const host = parsed.hostname;
+  if (/^(127\.|10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|0\.0\.0\.0|localhost|::1|::ffff:127)/.test(host)) {
+    throw new Error('Private IPs blocked');
+  }
+  return parsed;
+}
 
 function fetchUrl(url) {
   return new Promise((resolve, reject) => {
+    try { validateExternalUrl(url); } catch(e) { return reject(e); }
     const mod = url.startsWith('https') ? https : http;
     mod.get(url, { headers: { 'User-Agent': 'Mozilla/5.0' } }, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
@@ -451,6 +464,7 @@ function postForm(url, body) {
 
 function downloadFile(url, destPath, onProgress) {
   return new Promise((resolve, reject) => {
+    try { validateExternalUrl(url); } catch(e) { return reject(e); }
     const mod = url.startsWith('https') ? https : http;
     mod.get(url, { headers: { 'User-Agent': 'Mozilla/5.0', 'Referer': 'https://www.romsgames.net/' } }, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
@@ -548,10 +562,10 @@ app.post('/api/store/download', async (req, res) => {
     }
 
     // Step 3: Download the file
-    const fileName = decodeURIComponent(dlInfo.downloadName || (slug + '.zip'));
+    const fileName = sanitizeParam(decodeURIComponent(dlInfo.downloadName || (slug + '.zip')));
     const romDir = path.join(ROMS_DIR, system);
     fs.mkdirSync(romDir, { recursive: true });
-    const destPath = path.join(romDir, fileName);
+    const destPath = safePath(romDir, fileName);
 
     if (fs.existsSync(destPath)) {
       downloadProgress.set(dlId, { status: 'done', file: fileName, system, alreadyExists: true });
@@ -571,9 +585,9 @@ app.post('/api/store/download', async (req, res) => {
       try {
         const coverDir = path.join(COVERS_DIR, system);
         fs.mkdirSync(coverDir, { recursive: true });
-        const romName = path.parse(fileName).name;
+        const romName = sanitizeParam(path.parse(fileName).name);
         const coverExt = coverUrl.match(/\.(jpe?g|png|webp)/i)?.[0] || '.jpg';
-        const coverPath = path.join(coverDir, romName + coverExt);
+        const coverPath = safePath(coverDir, romName + coverExt);
         let fullCoverUrl = coverUrl;
         if (fullCoverUrl.startsWith('//')) fullCoverUrl = 'https:' + fullCoverUrl;
         await downloadFile(fullCoverUrl, coverPath);
@@ -660,7 +674,8 @@ app.get('/api/store/search', async (req, res) => {
 
 // Auto-fetch cover art for a ROM by searching romsgames.net
 app.post('/api/covers/fetch/:system/:romName', adminMiddleware, async (req, res) => {
-  const { system, romName } = req.params;
+  const system = sanitizeParam(req.params.system);
+  const romName = sanitizeParam(req.params.romName);
   if (!SYSTEMS[system]) return res.status(400).json({ error: 'Unknown system' });
 
   try {
@@ -700,7 +715,7 @@ app.post('/api/covers/fetch/:system/:romName', adminMiddleware, async (req, res)
     const coverDir = path.join(COVERS_DIR, system);
     fs.mkdirSync(coverDir, { recursive: true });
     const coverExt = coverUrl.match(/\.(jpe?g|png|webp)/i)?.[0] || '.jpg';
-    const coverPath = path.join(coverDir, romName + coverExt);
+    const coverPath = safePath(coverDir, romName + coverExt);
     await downloadFile(coverUrl, coverPath);
 
     res.json({ ok: true, cover: '/covers/' + system + '/' + romName + coverExt });

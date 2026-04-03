@@ -70,10 +70,10 @@
     position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
     display: flex; align-items: center; justify-content: space-between;
     padding: 0 1.5rem; height: 60px;
-    background: rgba(10,10,20,0.6);
+    background: var(--bg-nav);
     backdrop-filter: blur(20px) saturate(1.5); -webkit-backdrop-filter: blur(20px) saturate(1.5);
-    border-bottom: 1px solid rgba(255,255,255,0.06);
-    box-shadow: 0 4px 30px rgba(0,0,0,0.3);
+    border-bottom: 1px solid var(--bg-input-border);
+    box-shadow: 0 4px 30px rgba(0,0,0,0.1);
     transition: var(--transition-theme);
   }
   .nav-logo {
@@ -150,7 +150,7 @@
   .hero-info h2 {
     font-size: 2.2rem; font-weight: 800; line-height: 1.1;
     margin-bottom: 0.6rem;
-    background: linear-gradient(135deg, #fff 0%, #e0e0ff 50%, #e94560 100%);
+    background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent) 100%);
     -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     background-clip: text;
   }
@@ -256,10 +256,10 @@
   }
   .game-card {
     position: relative; border-radius: 16px; overflow: hidden;
-    background: rgba(26,26,46,0.6);
-    border: 1px solid rgba(255,255,255,0.06);
+    background: var(--bg-card);
+    border: 1px solid var(--bg-card-border);
     aspect-ratio: 3 / 4;
-    transition: transform 0.4s cubic-bezier(.17,.67,.35,1.2), box-shadow 0.4s ease;
+    transition: transform 0.4s cubic-bezier(.17,.67,.35,1.2), box-shadow 0.4s ease, var(--transition-theme);
     cursor: pointer;
     backdrop-filter: blur(4px);
     animation: cardSlideUp 0.6s ease backwards;
@@ -384,8 +384,8 @@
   }
   .modal-overlay.open { display: flex; }
   .modal {
-    background: rgba(18,18,31,0.95);
-    border: 1px solid rgba(255,255,255,0.08);
+    background: var(--bg-secondary);
+    border: 1px solid var(--bg-card-border);
     border-radius: 20px;
     backdrop-filter: blur(20px);
     box-shadow: 0 24px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.03);
@@ -495,7 +495,7 @@
   @media (max-width: 520px) { .skeleton-grid { grid-template-columns: repeat(2, 1fr); } }
   .skeleton-card {
     aspect-ratio: 3/4; border-radius: 12px;
-    background: linear-gradient(110deg, #12121f 30%, #1a1a2e 50%, #12121f 70%);
+    background: linear-gradient(110deg, var(--bg-secondary) 30%, var(--bg-card) 50%, var(--bg-secondary) 70%);
     background-size: 200% 100%;
     animation: skeletonPulse 1.5s ease-in-out infinite;
   }
@@ -524,13 +524,13 @@
   }
   .system-section-header h3 {
     font-size: 1.2rem; font-weight: 700;
-    background: linear-gradient(135deg, #fff, #ccc);
+    background: linear-gradient(135deg, var(--text-primary), var(--text-secondary));
     -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     background-clip: text;
   }
   .system-section-header .sys-count { color: #666; font-size: 0.85rem; margin-left: 0.3rem; }
   .system-lore {
-    font-size: 0.78rem; color: #666; font-style: italic;
+    font-size: 0.78rem; color: var(--text-muted); font-style: italic;
     margin-bottom: 0.8rem; max-width: 600px;
     opacity: 0; animation: fadeInUp 0.8s ease forwards;
   }
@@ -655,7 +655,7 @@
   .recently-played-grid::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
   .recent-card {
     flex: 0 0 180px; border-radius: 12px; overflow: hidden;
-    background: rgba(26,26,46,0.6); border: 1px solid rgba(255,255,255,0.06);
+    background: var(--bg-card); border: 1px solid rgba(255,255,255,0.06);
     cursor: pointer; transition: all 0.3s ease;
     position: relative;
   }
@@ -921,7 +921,7 @@ function renderHero(totalRoms) {
   if (!featured) { hero.innerHTML = ''; return; }
   const meta = SYSTEM_META[featured.system] || { icon: '🎮', color: '#e94560', gradient: ['#e94560','#8b0000'] };
   const coverHtml = featured.cover
-    ? `<img src="/covers/${featured.system}/${featured.cover}" alt="${featured.name}">`
+    ? `<img src="${featured.cover}" alt="${escHtml(featured.name)}">`
     : `<div class="hero-cover-placeholder" style="background:linear-gradient(135deg,${meta.gradient[0]},${meta.gradient[1]})">${meta.icon}</div>`;
   const playerUrl = `/player.html?system=${featured.system}&core=${featured.core}&rom=${encodeURIComponent(featured.file)}`;
   hero.innerHTML = `
@@ -998,7 +998,7 @@ function renderGames() {
           <h3>${meta.name}</h3>
           <span class="sys-count">${sys.romCount}</span>
         </div>
-        <p class="system-lore">${SYSTEM_LORE[sys.id] || ''}</p>
+        <p class="system-lore">${escHtml(SYSTEM_LORE[sys.id] || '')}</p>
         <div class="game-grid">${sys.roms.map(rom => gameCardHtml(rom, sys)).join('')}</div>
       </div>`;
     }
@@ -1014,7 +1014,7 @@ function renderGames() {
           <h3>${meta.name}</h3>
           <span class="sys-count">${sys.romCount}</span>
         </div>
-        <p class="system-lore">${SYSTEM_LORE[sys.id] || ''}</p>
+        <p class="system-lore">${escHtml(SYSTEM_LORE[sys.id] || '')}</p>
         <div class="game-grid">${sys.roms.map(rom => gameCardHtml(rom, sys)).join('')}</div>
       </div>`;
   }
@@ -1053,7 +1053,7 @@ function renderSearchResults(results) {
     const bgStyle = r.cover
       ? '' : `background:linear-gradient(135deg,${meta.gradient[0]},${meta.gradient[1]});`;
     const coverImg = r.cover
-      ? `<div class="game-card-cover"><img src="/covers/${r.system}/${r.cover}" alt="${escHtml(r.name)}" loading="lazy"></div>`
+      ? `<div class="game-card-cover"><img src="${r.cover}" alt="${escHtml(r.name)}" loading="lazy"></div>`
       : `<div class="game-card-bg" style="${bgStyle}"><span class="card-icon">${meta.icon}</span></div>`;
     return `<div class="game-card" data-system="${r.system}" data-core="${r.core}" data-file="${escAttr(r.file)}" data-name="${escAttr(r.name)}">
       <a class="game-card-link" href="${playerUrl}">
@@ -1832,8 +1832,9 @@ document.getElementById('mainContent').addEventListener('click', function(e) {
   trackPlay(system, core, file, name, cover);
 });
 
-// Also track hero play button clicks
-document.getElementById('heroSection').addEventListener('click', function(e) {
+// Also track hero play button clicks (use document delegation since heroSection innerHTML gets replaced)
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('#heroSection')) return;
   const btn = e.target.closest('.hero-play-btn');
   if (!btn) return;
   const heroCard = document.querySelector('.hero-cover img');
@@ -1858,8 +1859,12 @@ document.getElementById('heroSection').addEventListener('click', function(e) {
   const PARTICLE_COUNT = 80;
   
   function resize() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = window.innerWidth * dpr;
+    canvas.height = window.innerHeight * dpr;
+    canvas.style.width = window.innerWidth + 'px';
+    canvas.style.height = window.innerHeight + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
   
   function createParticles() {

@@ -340,20 +340,25 @@
     });
   }
 
-  // Back button: show on mouse/touch activity, hide after 2s idle
+  // Back button & CRT toggle: show on mouse/touch activity, hide after 2s idle
   let hideTimer;
+  let crtHideTimer;
   const backBtn = document.getElementById('back-btn');
-  function showBackBtn() {
+  const crtToggle = document.getElementById('crt-toggle');
+  const crtOverlay = document.getElementById('crt-overlay');
+
+  function showUIElements() {
     backBtn.classList.add('visible');
     clearTimeout(hideTimer);
     hideTimer = setTimeout(function() { backBtn.classList.remove('visible'); }, 2000);
+    crtToggle.classList.add('visible');
+    clearTimeout(crtHideTimer);
+    crtHideTimer = setTimeout(function() { crtToggle.classList.remove('visible'); }, 2000);
   }
-  document.addEventListener('mousemove', showBackBtn);
-  document.addEventListener('touchstart', showBackBtn, { passive: true });
+  document.addEventListener('mousemove', showUIElements);
+  document.addEventListener('touchstart', showUIElements, { passive: true });
 
   // CRT scanline toggle
-  const crtToggle = document.getElementById('crt-toggle');
-  const crtOverlay = document.getElementById('crt-overlay');
   const crtEnabled = localStorage.getItem('retroplay_crt') === 'true';
   if (crtEnabled) { crtOverlay.classList.add('active'); crtToggle.classList.add('active'); }
 
@@ -363,20 +368,10 @@
     localStorage.setItem('retroplay_crt', isActive);
   });
 
-  // Show CRT toggle on mouse activity (same as back button)
-  function showCrtToggle() {
-    crtToggle.classList.add('visible');
-    clearTimeout(crtHideTimer);
-    crtHideTimer = setTimeout(function() { crtToggle.classList.remove('visible'); }, 2000);
-  }
-  let crtHideTimer;
-  document.addEventListener('mousemove', showCrtToggle);
-  document.addEventListener('touchstart', showCrtToggle, { passive: true });
-
   // Track this game as recently played
   if (system && romFile) {
     try {
-      var trackName = romFile.replace(/\.[^.]+$/, '').replace(/\s*[\(\[][^\)\]]*[\)\]]\s*/g, '').trim();
+      const trackName = romFile.replace(/\.[^.]+$/, '').replace(/\s*[\(\[][^\)\]]*[\)\]]\s*/g, '').trim();
       let recent = JSON.parse(localStorage.getItem('retroplay_recent') || '[]');
       recent = recent.filter(r => !(r.system === system && r.file === romFile));
       recent.unshift({ system, core, file: romFile, name: trackName, cover: null, time: Date.now() });

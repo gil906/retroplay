@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>RetroPlay</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%23e94560'/%3E%3Ctext x='50' y='68' font-size='55' text-anchor='middle' fill='white'%3E🎮%3C/text%3E%3C/svg%3E">
+<meta name="theme-color" content="#e94560">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -177,10 +179,40 @@
     content: ''; position: absolute; inset: 0;
     background: radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.15) 100%);
   }
+  #fullscreen-btn {
+    position: fixed; top: 16px; right: 100px; z-index: 10000;
+    background: rgba(10,10,20,0.7); color: #888;
+    border: 1px solid rgba(255,255,255,0.08);
+    padding: 0.5rem 1rem; border-radius: 24px; cursor: pointer;
+    font-size: 0.8rem; font-family: 'Inter', system-ui, sans-serif; font-weight: 600;
+    backdrop-filter: blur(12px);
+    opacity: 0; transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+  }
+  #fullscreen-btn.visible { opacity: 1; }
+  #fullscreen-btn:hover { color: #fff; background: rgba(0,184,148,0.7); }
+  #keyboard-hint {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    z-index: 10001; background: rgba(10,10,20,0.85); color: #aaa;
+    padding: 0.6rem 1.2rem; border-radius: 12px; font-size: 0.75rem;
+    font-family: 'Inter', system-ui, sans-serif;
+    backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.06);
+    display: flex; gap: 1.5rem; opacity: 0;
+    animation: hintFadeIn 0.5s ease 2s forwards, hintFadeOut 0.5s ease 10s forwards;
+    pointer-events: none; white-space: nowrap;
+  }
+  @keyframes hintFadeIn { to { opacity: 1; } }
+  @keyframes hintFadeOut { to { opacity: 0; } }
+  #keyboard-hint kbd {
+    background: rgba(255,255,255,0.1); padding: 0.1rem 0.4rem;
+    border-radius: 4px; font-size: 0.7rem; font-family: inherit;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
 </style>
 </head>
 <body>
 <a id="back-btn" href="/">🏠 Library</a>
+<button id="fullscreen-btn">⛶ Fullscreen</button>
 <button id="crt-toggle">📺 CRT</button>
 <div class="crt-overlay" id="crt-overlay"></div>
 
@@ -200,6 +232,12 @@
 </div>
 
 <div id="game"></div>
+
+<div id="keyboard-hint" style="display:none;">
+  <span><kbd>F</kbd> Fullscreen</span>
+  <span><kbd>Esc</kbd> Exit</span>
+  <span><kbd>📺</kbd> CRT Filter</span>
+</div>
 
 <script>
   const params = new URLSearchParams(window.location.search);
@@ -346,6 +384,7 @@
   const backBtn = document.getElementById('back-btn');
   const crtToggle = document.getElementById('crt-toggle');
   const crtOverlay = document.getElementById('crt-overlay');
+  const fullscreenBtn = document.getElementById('fullscreen-btn');
 
   function showUIElements() {
     backBtn.classList.add('visible');
@@ -354,7 +393,11 @@
     crtToggle.classList.add('visible');
     clearTimeout(crtHideTimer);
     crtHideTimer = setTimeout(function() { crtToggle.classList.remove('visible'); }, 2000);
+    fullscreenBtn.classList.add('visible');
+    clearTimeout(fsHideTimer);
+    fsHideTimer = setTimeout(function() { fullscreenBtn.classList.remove('visible'); }, 2000);
   }
+  let fsHideTimer;
   document.addEventListener('mousemove', showUIElements);
   document.addEventListener('touchstart', showUIElements, { passive: true });
 
@@ -378,6 +421,36 @@
       if (recent.length > 20) recent = recent.slice(0, 20);
       localStorage.setItem('retroplay_recent', JSON.stringify(recent));
     } catch(e) {}
+  }
+
+  // Fullscreen toggle
+  fullscreenBtn.addEventListener('click', function() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(function(){});
+      fullscreenBtn.textContent = '⛶ Exit FS';
+    } else {
+      document.exitFullscreen();
+      fullscreenBtn.textContent = '⛶ Fullscreen';
+    }
+  });
+  document.addEventListener('fullscreenchange', function() {
+    fullscreenBtn.textContent = document.fullscreenElement ? '⛶ Exit FS' : '⛶ Fullscreen';
+  });
+
+  // Keyboard shortcut: F for fullscreen
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'f' || e.key === 'F') {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(function(){});
+      else document.exitFullscreen();
+    }
+  });
+
+  // Show keyboard hint on first visit
+  if (!localStorage.getItem('retroplay_hint_shown')) {
+    const hint = document.getElementById('keyboard-hint');
+    if (hint) hint.style.display = 'flex';
+    localStorage.setItem('retroplay_hint_shown', 'true');
   }
 </script>
 </body>

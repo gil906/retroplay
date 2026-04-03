@@ -6,15 +6,19 @@ const cheerio = require('cheerio');
 const https = require('https');
 const http = require('http');
 const cors = require('cors');
+const compression = require('compression');
 const { Server: SocketIO } = require('socket.io');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 
 const app = express();
-app.use(cors({ origin: '*' }));
+app.use(cors());
+app.use(compression());
 app.use(express.json());
 const server = http.createServer(app);
+
+const START_TIME = Date.now();
 
 const ROMS_DIR = '/data/roms';
 const SAVES_DIR = '/data/saves';
@@ -157,11 +161,20 @@ app.use('/roms', express.static(ROMS_DIR));
 // Serve saves
 app.use('/saves', express.static(SAVES_DIR));
 
-// Serve cover images
-app.use('/covers', express.static(COVERS_DIR));
+// Serve cover images with caching headers
+app.use('/covers', express.static(COVERS_DIR, {
+  maxAge: '7d',
+  etag: true,
+  lastModified: true,
+}));
 
-// API: List all systems and their ROMs
-app.get('/api/systems', (req, res) => {
+// ── API caching for /api/systems ──
+let systemsCache = null;
+let systemsCacheTime = 0;
+const SYSTEMS_CACHE_TTL = 5000; // 5 seconds
+
+function getSystemsData() {
+  if (systemsCache && (Date.now() - systemsCacheTime) < SYSTEMS_CACHE_TTL) return systemsCache;
   const result = [];
   for (const [id, sys] of Object.entries(SYSTEMS)) {
     const romDir = path.join(ROMS_DIR, id);
@@ -187,7 +200,16 @@ app.get('/api/systems', (req, res) => {
     } catch (e) { /* directory may not exist yet */ }
     result.push({ id, core: sys.core, name: sys.name, romCount: roms.length, roms });
   }
-  res.json(result);
+  systemsCache = result;
+  systemsCacheTime = Date.now();
+  return result;
+}
+
+function invalidateSystemsCache() { systemsCache = null; }
+
+// API: List all systems and their ROMs (cached)
+app.get('/api/systems', (req, res) => {
+  res.json(getSystemsData());
 });
 
 // API: Upload ROMs (admin only)
@@ -195,12 +217,14 @@ app.post('/api/roms/:system', adminMiddleware, uploadRom.array('roms', 50), (req
   const system = req.params.system;
   if (!SYSTEMS[system]) return res.status(400).json({ error: 'Unknown system' });
   const uploaded = (req.files || []).map(f => f.originalname);
+  invalidateSystemsCache();
   res.json({ ok: true, system, uploaded, count: uploaded.length });
 });
 
 // API: Upload cover image for a ROM (admin only)
 app.post('/api/covers/:system/:romName', adminMiddleware, uploadCover.single('cover'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+  invalidateSystemsCache();
   res.json({ ok: true, path: '/covers/' + req.params.system + '/' + req.file.filename });
 });
 
@@ -210,6 +234,7 @@ app.delete('/api/roms/:system/:file', adminMiddleware, (req, res) => {
     const filePath = safePath(ROMS_DIR, sanitizeParam(req.params.system), sanitizeParam(req.params.file));
     if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'not found' });
     fs.unlinkSync(filePath);
+    invalidateSystemsCache();
     res.json({ ok: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -257,8 +282,34 @@ app.get('/api/saves/:system/:file', (req, res) => {
   res.status(404).json({ error: 'not found' });
 });
 
+// ── Rate limiter for auth endpoints ──
+const authAttempts = new Map();
+function rateLimitAuth(req, res, next) {
+  const ip = getClientIp(req);
+  const now = Date.now();
+  const window = 60000; // 1 minute
+  const maxAttempts = 10;
+  let attempts = authAttempts.get(ip) || [];
+  attempts = attempts.filter(t => now - t < window);
+  if (attempts.length >= maxAttempts) {
+    return res.status(429).json({ error: 'Too many attempts. Try again in a minute.' });
+  }
+  attempts.push(now);
+  authAttempts.set(ip, attempts);
+  next();
+}
+// Clean up rate limiter every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, times] of authAttempts) {
+    const recent = times.filter(t => now - t < 60000);
+    if (recent.length === 0) authAttempts.delete(ip);
+    else authAttempts.set(ip, recent);
+  }
+}, 300000);
+
 // ── Auth API ──
-app.post('/api/auth/register', (req, res) => {
+app.post('/api/auth/register', rateLimitAuth, (req, res) => {
   const { email, password, name } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
   if (password.length < 4) return res.status(400).json({ error: 'Password must be at least 4 characters' });
@@ -273,7 +324,7 @@ app.post('/api/auth/register', (req, res) => {
   res.json({ ok: true, token, user: { id: user.id, email: user.email, name: user.name } });
 });
 
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', rateLimitAuth, (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
   const users = loadUsers();
@@ -386,6 +437,31 @@ app.get('/api/search', (req, res) => {
     } catch(e) {}
   }
   res.json(results);
+});
+
+// API: Health check with uptime and version
+app.get('/api/health', (req, res) => {
+  const uptime = Math.floor((Date.now() - START_TIME) / 1000);
+  const mem = process.memoryUsage();
+  res.json({
+    status: 'ok',
+    version: '2.0.0',
+    uptime,
+    uptimeHuman: uptime > 86400 ? Math.floor(uptime/86400) + 'd' : uptime > 3600 ? Math.floor(uptime/3600) + 'h' : Math.floor(uptime/60) + 'm',
+    memory: { rss: Math.round(mem.rss / 1048576) + 'MB', heap: Math.round(mem.heapUsed / 1048576) + 'MB' },
+  });
+});
+
+// API: Stats — per-system ROM counts
+app.get('/api/stats', (req, res) => {
+  const systems = getSystemsData();
+  const stats = { total: 0, systems: {} };
+  for (const sys of systems) {
+    stats.systems[sys.id] = { name: sys.name, count: sys.romCount };
+    stats.total += sys.romCount;
+  }
+  stats.systemCount = systems.filter(s => s.romCount > 0).length;
+  res.json(stats);
 });
 
 // ── ROM Store: romsgames.net integration ──
@@ -532,9 +608,11 @@ app.get('/api/store/browse', async (req, res) => {
 
 // Download a ROM from romsgames.net (with progress tracking)
 app.post('/api/store/download', async (req, res) => {
-  const { slug, system } = req.body;
-  if (!slug || !system) return res.status(400).json({ error: 'slug and system are required' });
+  const { slug: rawSlug, system } = req.body;
+  if (!rawSlug || !system) return res.status(400).json({ error: 'slug and system are required' });
   if (!SYSTEMS[system]) return res.status(400).json({ error: 'Unknown system' });
+  // Sanitize slug: only allow alphanumeric, hyphens, underscores
+  const slug = rawSlug.replace(/[^a-zA-Z0-9\-_]/g, '');
 
   const dlId = crypto.randomBytes(8).toString('hex');
   downloadProgress.set(dlId, { status: 'preparing', received: 0, total: 0, startTime: Date.now() });
@@ -595,6 +673,7 @@ app.post('/api/store/download', async (req, res) => {
     }
 
     downloadProgress.set(dlId, { status: 'done', file: fileName, system, alreadyExists: false });
+    invalidateSystemsCache();
     // Clean up after 60s
     setTimeout(() => downloadProgress.delete(dlId), 60000);
   } catch (e) {

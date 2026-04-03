@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>RetroPlay - Game Library</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%23e94560'/%3E%3Ctext x='50' y='68' font-size='55' text-anchor='middle' fill='white'%3E🎮%3C/text%3E%3C/svg%3E">
+<meta name="description" content="RetroPlay — Your retro game library. Play NES, SNES, N64, Game Boy and more in your browser.">
+<meta name="theme-color" content="#e94560">
+<meta property="og:title" content="RetroPlay - Game Library">
+<meta property="og:description" content="Play classic retro games in your browser. NES, SNES, N64, Game Boy and more.">
+<meta property="og:type" content="website">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -245,8 +251,10 @@
     .hero { padding: 1.5rem 1rem; }
     .hero-cover { width: 100px; height: 133px; }
     .hero-info h2 { font-size: 1.1rem; }
-    .navbar { padding: 0 0.8rem; }
+    .navbar { padding: 0 0.8rem; gap: 0.3rem; flex-wrap: wrap; height: auto; padding: 0.5rem 0.6rem; }
     .nav-upload-btn span.btn-text { display: none; }
+    .nav-upload-btn { padding: 0.4rem 0.6rem; font-size: 0.75rem; }
+    .nav-search { display: none; }
   }
 
   /* ── Game Card ── */
@@ -876,6 +884,7 @@ const SYSTEM_LORE = {
 
 let allSystems = [];
 let activeFilter = 'all';
+let currentSort = 'name-asc';
 let searchDebounce = null;
 let pendingUploadFiles = [];
 let ctxTarget = null; // { system, rom, core }
@@ -902,11 +911,14 @@ function getAllRoms() {
       roms.push({ ...rom, system: sys.id, systemName: sys.name, core: sys.core });
     }
   }
+  if (currentSort === 'name-asc') roms.sort((a, b) => a.name.localeCompare(b.name));
+  else if (currentSort === 'name-desc') roms.sort((a, b) => b.name.localeCompare(a.name));
   return roms;
 }
 
 function render() {
   const totalRoms = allSystems.reduce((s, sys) => s + sys.romCount, 0);
+  document.title = totalRoms > 0 ? `RetroPlay — ${totalRoms} Games` : 'RetroPlay - Game Library';
   renderHero(totalRoms);
   renderFilters(totalRoms);
   renderGames();
@@ -917,7 +929,10 @@ function renderHero(totalRoms) {
   if (totalRoms === 0) { hero.innerHTML = ''; return; }
   // Pick the first ROM with a cover, or just the first ROM
   const allRoms = getAllRoms();
-  const featured = allRoms.find(r => r.cover) || allRoms[0];
+  const romsWithCovers = allRoms.filter(r => r.cover);
+  const featured = romsWithCovers.length > 0
+    ? romsWithCovers[Math.floor(Math.random() * romsWithCovers.length)]
+    : allRoms[Math.floor(Math.random() * allRoms.length)];
   if (!featured) { hero.innerHTML = ''; return; }
   const meta = SYSTEM_META[featured.system] || { icon: '🎮', color: '#e94560', gradient: ['#e94560','#8b0000'] };
   const coverHtml = featured.cover
@@ -968,6 +983,11 @@ function renderFilters(totalRoms) {
     html += `<div class="filter-pill ${isActive ? 'active' : ''}" data-filter="${sys.id}"
       style="${isActive ? `background:${meta.color};` : ''}">${meta.icon} ${meta.name} <span class="pill-count">${sys.romCount}</span></div>`;
   }
+  html += `<select id="sortSelect" style="margin-left:auto;padding:0.35rem 0.7rem;border-radius:20px;background:var(--bg-input);border:1px solid var(--bg-input-border);color:var(--text-primary);font-size:0.78rem;font-family:inherit;cursor:pointer;outline:none;">
+    <option value="name-asc"${currentSort==='name-asc'?' selected':''}>A → Z</option>
+    <option value="name-desc"${currentSort==='name-desc'?' selected':''}>Z → A</option>
+    <option value="system"${currentSort==='system'?' selected':''}>By System</option>
+  </select>`;
   scroll.innerHTML = html;
 }
 
@@ -1041,6 +1061,13 @@ function gameCardHtml(rom, sys) {
   </div>`;
 }
 
+function highlightMatch(text, query) {
+  if (!query) return escHtml(text);
+  const escaped = escHtml(text);
+  const regex = new RegExp('(' + query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+  return escaped.replace(regex, '<mark style="background:rgba(233,69,96,0.3);color:inherit;padding:0 2px;border-radius:2px;">$1</mark>');
+}
+
 function renderSearchResults(results) {
   const container = document.getElementById('gameContent');
   if (results.length === 0) {
@@ -1060,7 +1087,7 @@ function renderSearchResults(results) {
         ${coverImg}
         <div class="game-card-play"><div class="play-circle">▶</div></div>
         <div class="game-card-info">
-          <div class="game-card-title">${escHtml(r.name)}</div>
+          <div class="game-card-title">${highlightMatch(r.name, document.getElementById('searchInput').value.trim())}</div>
           <div class="game-card-system" style="background:${meta.color}">${meta.icon} ${r.systemName || meta.name}</div>
         </div>
       </a>
@@ -1099,6 +1126,17 @@ document.getElementById('filterScroll').addEventListener('click', function(e) {
   if (!pill) return;
   activeFilter = pill.dataset.filter;
   render();
+  if (activeFilter !== 'all') {
+    const section = document.querySelector('.system-section');
+    if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+});
+
+document.getElementById('filterScroll').addEventListener('change', function(e) {
+  if (e.target.id === 'sortSelect') {
+    currentSort = e.target.value;
+    render();
+  }
 });
 
 // ── Context menu (event delegation) ──
@@ -1153,7 +1191,7 @@ document.getElementById('coverFileInput').addEventListener('change', async funct
   try {
     const res = await fetch(`/api/covers/${ctxTarget.system}/${encodeURIComponent(ctxTarget.name)}`, { method: 'POST', body: fd });
     if (res.ok) loadSystems();
-  } catch (e) { alert('Cover upload failed'); }
+  } catch (e) { showStoreNotification('❌ Cover upload failed', 'error'); setTimeout(hideStoreNotification, 3000); }
   this.value = '';
 });
 
@@ -1165,7 +1203,7 @@ async function deleteRom() {
   try {
     const res = await fetch(`/api/roms/${ctxTarget.system}/${encodeURIComponent(ctxTarget.file)}`, { method: 'DELETE' });
     if (res.ok) loadSystems();
-  } catch (e) { alert('Delete failed'); }
+  } catch (e) { showStoreNotification('❌ Delete failed', 'error'); setTimeout(hideStoreNotification, 3000); }
 }
 
 // ── Auto-fetch cover art ──
@@ -1920,6 +1958,18 @@ document.addEventListener('click', function(e) {
   animate();
   window.addEventListener('resize', () => { resize(); createParticles(); });
 })();
+
+// ── Keyboard Shortcuts ──
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
+    hideCtxMenu();
+  }
+  if (e.key === '/' && !e.target.closest('input, textarea, select')) {
+    e.preventDefault();
+    document.getElementById('searchInput').focus();
+  }
+});
 </script>
 </body>
 </html>

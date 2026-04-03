@@ -1,10 +1,11 @@
 {
   "name": "emulatorjs-server",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "cheerio": "^1.0.0",
+    "compression": "^1.7.4",
     "cors": "^2.8.5",
     "express": "^4.21.0",
     "jsonwebtoken": "^9.0.2",

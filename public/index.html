@@ -145,7 +145,8 @@
   .hero-cover-placeholder {
     width: 100%; height: 100%;
     display: flex; align-items: center; justify-content: center;
-    font-size: 4rem; opacity: 0.5;
+    font-size: 3rem; opacity: 0.35;
+    filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3));
   }
   .hero-info { flex: 1; min-width: 0; }
   .hero-info .hero-badge {
@@ -285,7 +286,7 @@
   .game-card:nth-child(11) { animation-delay: 0.55s; }
   .game-card:nth-child(12) { animation-delay: 0.6s; }
   .game-card:hover {
-    transform: scale(1.08) translateY(-8px); z-index: 10;
+    transform: scale(1.04) translateY(-6px); z-index: 10;
     box-shadow: 0 20px 60px rgba(233,69,96,0.3), 0 0 0 1px rgba(233,69,96,0.2);
   }
   .game-card::before {
@@ -306,29 +307,41 @@
     display: flex; align-items: center; justify-content: center;
   }
   .game-card-bg .card-icon {
-    font-size: 3.5rem; opacity: 0.4;
+    font-size: 3rem; opacity: 0.35;
+    filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3));
   }
   .game-card-cover {
     position: absolute; inset: 0;
+    overflow: hidden;
+    background: var(--bg-card);
   }
   .game-card-cover img {
     width: 100%; height: 100%; object-fit: cover;
   }
+  @keyframes imgFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  .game-card-cover img, .hero-cover img {
+    animation: imgFadeIn 0.4s ease forwards;
+  }
   .game-card-info {
     position: absolute; bottom: 0; left: 0; right: 0;
-    padding: 2.5rem 0.7rem 0.7rem;
-    background: linear-gradient(transparent, rgba(0,0,0,0.85));
+    padding: 3rem 0.7rem 0.7rem;
+    background: linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.4) 40%, rgba(0,0,0,0.85) 100%);
     display: flex; flex-direction: column; gap: 0.3rem;
   }
   .game-card-title {
     font-size: 0.82rem; font-weight: 600; color: #fff;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden; line-height: 1.3;
   }
   .game-card-system {
     display: inline-flex; align-items: center; gap: 0.25rem;
     padding: 0.15rem 0.5rem; border-radius: 6px;
-    font-size: 0.65rem; font-weight: 600; color: #fff;
-    width: fit-content;
+    font-size: 0.6rem; font-weight: 700; color: #fff;
+    width: fit-content; letter-spacing: 0.02em;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
   }
 
   /* Play overlay on hover */
@@ -348,7 +361,7 @@
     transition: all 0.3s cubic-bezier(.17,.67,.35,1.2);
   }
   .game-card:hover .play-circle {
-    transform: scale(1.2);
+    transform: scale(1.1);
     box-shadow: 0 12px 40px rgba(233,69,96,0.6);
   }
 
@@ -554,7 +567,7 @@
   .store-card:hover { transform: scale(1.03); box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
   .store-card-img {
     width: 100%; aspect-ratio: 1/1; object-fit: cover;
-    background: linear-gradient(135deg, #1a1a2e, #2a2a4a);
+    background: linear-gradient(135deg, var(--bg-secondary), var(--bg-card));
   }
   .store-card-info { padding: 0.5rem 0.6rem; }
   .store-card-name {
@@ -662,7 +675,7 @@
   .recently-played-grid::-webkit-scrollbar-track { background: transparent; }
   .recently-played-grid::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
   .recent-card {
-    flex: 0 0 180px; border-radius: 12px; overflow: hidden;
+    flex: 0 0 160px; border-radius: 12px; overflow: hidden;
     background: var(--bg-card); border: 1px solid rgba(255,255,255,0.06);
     cursor: pointer; transition: all 0.3s ease;
     position: relative;
@@ -961,7 +974,7 @@ function renderHero(totalRoms) {
       const rUrl = `/player.html?system=${r.system}&core=${r.core}&rom=${encodeURIComponent(r.file)}`;
       const coverEl = r.cover
         ? `<img class="recent-card-img" src="${r.cover}" alt="${escHtml(r.name)}" loading="lazy">`
-        : `<div class="recent-card-img" style="display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,${rmeta.gradient[0]},${rmeta.gradient[1]});font-size:2rem;">${rmeta.icon}</div>`;
+        : `<div class="recent-card-img" style="display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,${rmeta.gradient[0]},${rmeta.gradient[1]});font-size:1.8rem;opacity:0.35;">${rmeta.icon}</div>`;
       recentHtml += `<a href="${rUrl}" class="recent-card" style="text-decoration:none;color:inherit;">${coverEl}<div class="recent-card-badge">${rmeta.icon}</div><div class="recent-card-info"><div class="recent-card-name">${escHtml(r.name)}</div><div class="recent-card-time">${timeAgo(r.time)}</div></div></a>`;
     }
     recentHtml += '</div></div>';
@@ -1421,7 +1434,7 @@ async function searchStore(q) {
       const sysName = STORE_SYSTEM_NAMES[rom.system] || rom.system;
       card.innerHTML = `
         ${imgSrc ? `<img class="store-card-img" src="${escAttr(imgSrc)}" alt="${escAttr(rom.name)}" loading="lazy">` :
-          `<div class="store-card-img" style="display:flex;align-items:center;justify-content:center;font-size:2rem;opacity:0.4;">${(SYSTEM_META[rom.system]||{icon:'🎮'}).icon}</div>`}
+          `<div class="store-card-img" style="display:flex;align-items:center;justify-content:center;font-size:1.8rem;opacity:0.35;">${(SYSTEM_META[rom.system]||{icon:'🎮'}).icon}</div>`}
         <div class="store-card-info">
           <div class="store-card-name" title="${escAttr(rom.name)}">${escHtml(rom.name)}</div>
           <div style="font-size:0.65rem;color:#888;margin-bottom:0.3rem;">${escHtml(sysName)}</div>
@@ -1475,7 +1488,7 @@ async function browseStore() {
       const imgSrc = rom.cover || '';
       card.innerHTML = `
         ${imgSrc ? `<img class="store-card-img" src="${escAttr(imgSrc)}" alt="${escAttr(rom.name)}" loading="lazy">` :
-          `<div class="store-card-img" style="display:flex;align-items:center;justify-content:center;font-size:2rem;opacity:0.4;">${(SYSTEM_META[rom.system]||{icon:'🎮'}).icon}</div>`}
+          `<div class="store-card-img" style="display:flex;align-items:center;justify-content:center;font-size:1.8rem;opacity:0.35;">${(SYSTEM_META[rom.system]||{icon:'🎮'}).icon}</div>`}
         <div class="store-card-info">
           <div class="store-card-name" title="${escAttr(rom.name)}">${escHtml(rom.name)}</div>
           <button class="store-dl-btn" data-slug="${escAttr(rom.slug)}" data-system="${escAttr(rom.system)}">⬇ Download & Play</button>
